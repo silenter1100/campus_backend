@@ -1,0 +1,28 @@
+[package]
+name = "campus_backend"
+version = "0.1.0"
+edition = "2021"
+
+# 请确保 dependencies 只有这一个区域，不要重复
+[dependencies]
+# 1. Web 框架 (Axum) - 类似于 Spring Boot Web
+axum = "0.7"
+
+# 2. 异步运行时 (Tokio) - Rust 的核心引擎
+# "full" 开启所有功能，包括多线程调度、IO 驱动等
+tokio = { version = "1", features = ["full"] }
+
+# 3. 序列化库 (Serde) - 类似于 Jackson/Gson
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 4. 数据库连接 (SQLx) - 类似于 MyBatis/Hibernate 的底层驱动
+# 这里指定使用 mysql，并开启 runtime-tokio
+sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-native-tls", "mysql" ] }
+
+# 5. 环境变量 (Dotenv) - 用于读取 .env 文件里的数据库密码
+dotenv = "0.15"
+
+# 6. 日志追踪 (Tracing) - 类似于 Log4j/Slf4j
+tracing = "0.1"
+tracing-subscriber = "0.3"
