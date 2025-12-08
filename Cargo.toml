@@ -28,5 +28,8 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 
 [build-dependencies]
-tonic-build = "0.12"
+# 1. Prost Build - 用于在构建时生成 Protobuf 代码
+prost-build = "0.13"
+
+# 2. Protoc Bin Vendored - 提供独立的 Protobuf 编译器
 protoc-bin-vendored = "3.0"

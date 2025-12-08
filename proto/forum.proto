@@ -3,33 +3,7 @@ syntax = "proto3";
 package forum.v1;
 
 // ======================================
-// 1. 服务接口
-// ======================================
-
-service BbsService {
-  rpc GetBoards(GetBoardsRequest) returns (GetBoardsResponse);
-  
-  rpc CreatePost(CreatePostRequest) returns (CreatePostResponse);
-  rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
-  rpc GetPost(GetPostRequest) returns (GetPostResponse);
-  rpc DeletePost(DeletePostRequest) returns (BaseResponse);
-  
-  rpc LikePost(LikePostRequest) returns (LikePostResponse);
-  rpc CollectPost(CollectPostRequest) returns (CollectPostResponse);
-  
-  rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse);
-  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
-  rpc DeleteComment(DeleteCommentRequest) returns (BaseResponse);
-  rpc LikeComment(LikeCommentRequest) returns (LikeCommentResponse);
-  
-  rpc CreateReport(CreateReportRequest) returns (CreateReportResponse);
-  
-  rpc AdminListReports(AdminListReportsRequest) returns (AdminListReportsResponse);
-  rpc AdminUpdatePostStatus(AdminUpdatePostStatusRequest) returns (BaseResponse);
-}
-
-// ======================================
-// 2. 数据模型
+// 数据模型
 // ======================================
 
 // 通用空响应（仅包含 code/message）
@@ -75,6 +49,23 @@ message CreatePostRequest {
 }
 
 message CreatePostResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    PostDetail post = 1;
+  }
+}
+
+message UpdatePostRequest {
+  string title = 1;
+  string content = 2;
+  repeated string tags = 3;
+  repeated MediaItem media = 4;
+}
+
+message UpdatePostResponse {
   int32 code = 1;
   string message = 2;
   Data data = 3;
@@ -253,7 +244,7 @@ message AdminUpdatePostStatusRequest {
 }
 
 // ======================================
-// 3. 业务实体
+// 业务实体
 // ======================================
 
 message PostLite {

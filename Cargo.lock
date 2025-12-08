@@ -171,12 +171,12 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "dotenv",
+ "prost-build",
  "protoc-bin-vendored",
  "serde",
  "serde_json",
  "sqlx",
  "tokio",
- "tonic-build",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1988,20 +1988,6 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
-]
-
-[[package]]
-name = "tonic-build"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9557ce109ea773b399c9b9e5dca39294110b74f1f342cb347a80d1fce8c26a11"
-dependencies = [
- "prettyplease",
- "proc-macro2",
- "prost-build",
- "prost-types",
- "quote",
- "syn 2.0.111",
 ]
 
 [[package]]
