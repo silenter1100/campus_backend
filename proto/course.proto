@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package campus.course;
+
+// ==================== 基础数据模型 ====================
+
+// 学期信息
+message Semester {
+  int64 id = 1;
+  string name = 2;
+  string start_date = 3;  // YYYY-MM-DD
+  string end_date = 4;    // YYYY-MM-DD
+  bool is_current = 5;
+}
+
+// 全校课程
+message PublicCourse {
+  int64 id = 1;
+  string course_name = 2;
+  string teacher_name = 3;
+  optional int64 teacher_id = 4;
+  string location = 5;
+  int32 day_of_week = 6;  // 1-7 (1代表周一)
+  int32 start_section = 7;
+  int32 end_section = 8;
+  repeated int32 weeks_range = 9;
+  string type = 10;  // "compulsory" 或 "elective"
+  optional int32 credits = 11;
+  optional string description = 12;
+}
+
+// 用户课表项
+message ScheduleItem {
+  int64 id = 1;
+  optional int64 source_id = 2;  // 关联的全校课程ID
+  string course_name = 3;
+  optional string teacher_name = 4;
+  optional string location = 5;
+  int32 day_of_week = 6;  // 1-7 (1代表周一)
+  int32 start_section = 7;
+  int32 end_section = 8;
+  repeated int32 weeks = 9;
+  optional string type = 10;  // "compulsory" 或 "elective"
+  optional int32 credits = 11;
+  optional string description = 12;
+  string color_hex = 13;  // #RRGGBB 格式
+  bool is_custom = 14;
+}
+
+// 分页信息
+message Pagination {
+  int64 total = 1;
+  int32 page = 2;
+  int32 pageSize = 3;
+  int32 pages = 4;
+}
+
+// 批量添加失败项
+message FailedItem {
+  string course_name = 1;
+  string error_message = 2;
+}
+
+// ==================== 请求消息 ====================
+
+// 获取学期列表请求
+message GetSemestersRequest {}
+
+// 获取全校课程列表请求
+message GetPublicCoursesRequest {
+  optional int64 semester_id = 1;
+  optional string name = 2;  // 课程名称模糊搜索
+  optional string teacher = 3;  // 教师姓名模糊搜索
+  int32 page = 4;
+  int32 pageSize = 5;
+}
+
+// 获取用户课表请求
+message GetScheduleRequest {
+  int64 semester_id = 1;
+  optional int32 week = 2;  // 筛选指定周
+}
+
+// 添加课表项请求
+message AddScheduleItemsRequest {
+  int64 semester_id = 1;
+  repeated ScheduleItemInput items = 2;
+}
+
+// 添加课表项输入
+message ScheduleItemInput {
+  optional int64 source_id = 1;  // 关联的全校课程ID
+  string course_name = 2;
+  optional string teacher_name = 3;
+  optional string location = 4;
+  int32 day_of_week = 5;
+  int32 start_section = 6;
+  int32 end_section = 7;
+  repeated int32 weeks = 8;
+  optional string type = 9;
+  optional int32 credits = 10;
+  optional string description = 11;
+  string color_hex = 12;  // #RRGGBB 格式
+  bool is_custom = 13;
+}
+
+// 更新课表项请求
+message UpdateScheduleItemRequest {
+  int64 item_id = 1;
+  optional string course_name = 2;
+  optional string teacher_name = 3;
+  optional string location = 4;
+  optional int32 day_of_week = 5;
+  optional int32 start_section = 6;
+  optional int32 end_section = 7;
+  repeated int32 weeks = 8;
+  optional string type = 9;
+  optional int32 credits = 10;
+  optional string description = 11;
+  optional string color_hex = 12;
+}
+
+// 删除课表项请求
+message DeleteScheduleItemRequest {
+  int64 item_id = 1;
+}
+
+// ==================== 响应消息 ====================
+
+// 获取学期列表响应
+message GetSemestersResponse {
+  int32 code = 1;
+  string message = 2;
+  GetSemestersData data = 3;
+}
+
+message GetSemestersData {
+  repeated Semester semesters = 1;
+}
+
+// 获取全校课程列表响应
+message GetPublicCoursesResponse {
+  int32 code = 1;
+  string message = 2;
+  GetPublicCoursesData data = 3;
+}
+
+message GetPublicCoursesData {
+  repeated PublicCourse list = 1;
+  Pagination pagination = 2;
+}
+
+// 获取用户课表响应
+message GetScheduleResponse {
+  int32 code = 1;
+  string message = 2;
+  GetScheduleData data = 3;
+}
+
+message GetScheduleData {
+  repeated ScheduleItem items = 1;
+}
+
+// 添加课表项响应
+message AddScheduleItemsResponse {
+  int32 code = 1;
+  string message = 2;
+  AddScheduleItemsData data = 3;
+}
+
+message AddScheduleItemsData {
+  repeated ScheduleItem successful_items = 1;
+  repeated FailedItem failed_items = 2;
+}
+
+// 更新课表项响应
+message UpdateScheduleItemResponse {
+  int32 code = 1;
+  string message = 2;
+  UpdateScheduleItemData data = 3;
+}
+
+message UpdateScheduleItemData {
+  ScheduleItem item = 1;
+}
+
+// 删除课表项响应
+message DeleteScheduleItemResponse {
+  int32 code = 1;
+  string message = 2;
+}
