@@ -1,0 +1,355 @@
+syntax = "proto3";
+
+package forum.v1;
+
+// ======================================
+// 1. 服务接口
+// ======================================
+
+service BbsService {
+  rpc GetBoards(GetBoardsRequest) returns (GetBoardsResponse);
+  
+  rpc CreatePost(CreatePostRequest) returns (CreatePostResponse);
+  rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
+  rpc GetPost(GetPostRequest) returns (GetPostResponse);
+  rpc DeletePost(DeletePostRequest) returns (BaseResponse);
+  
+  rpc LikePost(LikePostRequest) returns (LikePostResponse);
+  rpc CollectPost(CollectPostRequest) returns (CollectPostResponse);
+  
+  rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse);
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+  rpc DeleteComment(DeleteCommentRequest) returns (BaseResponse);
+  rpc LikeComment(LikeCommentRequest) returns (LikeCommentResponse);
+  
+  rpc CreateReport(CreateReportRequest) returns (CreateReportResponse);
+  
+  rpc AdminListReports(AdminListReportsRequest) returns (AdminListReportsResponse);
+  rpc AdminUpdatePostStatus(AdminUpdatePostStatusRequest) returns (BaseResponse);
+}
+
+// ======================================
+// 2. 数据模型
+// ======================================
+
+// 通用空响应（仅包含 code/message）
+message BaseResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+// ---------------------
+// Boards
+// ---------------------
+
+message GetBoardsRequest {}
+
+message GetBoardsResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    repeated Board list = 1;
+  }
+}
+
+message Board {
+  string id = 1;
+  string name = 2;
+  string icon = 3;
+  string description = 4;
+  string type = 5; 
+}
+
+// ---------------------
+// Posts
+// ---------------------
+
+message CreatePostRequest {
+  string board_id = 1;
+  string title = 2;
+  string content = 3;
+  repeated string tags = 4;
+  repeated MediaItem media = 5;
+}
+
+message CreatePostResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    PostDetail post = 1;
+  }
+}
+
+message ListPostsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string board_id = 3;  
+  string keyword = 4;
+  string filter = 5; 
+  string sort = 6;   
+}
+
+message ListPostsResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    repeated PostLite list = 1;
+    Pagination pagination = 2;
+  }
+}
+
+message GetPostRequest { string id = 1; }
+
+message GetPostResponse {
+  int32 code = 1;
+  string message = 2;
+  PostDetail data = 3;
+}
+
+message DeletePostRequest { string id = 1; }
+
+// Like Post
+message LikePostRequest {
+  string id = 1;
+  string action = 2;  // "like" | "unlike"
+}
+
+message LikePostResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    int32 current_like_count = 1;
+    bool is_liked = 2;
+  }
+}
+
+// Collect Post
+message CollectPostRequest {
+  string id = 1;
+  string action = 2; // "collect" | "uncollect"
+}
+
+message CollectPostResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    bool is_collected = 1;
+  }
+}
+
+// ---------------------
+// Comments
+// ---------------------
+
+message CreateCommentRequest {
+  string post_id = 1;
+  string content = 2;
+  string reply_to_comment_id = 3;
+}
+
+message CreateCommentResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+  
+  message Data {
+    string comment_id = 1;
+    Comment comment = 2;
+  }
+}
+
+message ListCommentsRequest {
+  string post_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListCommentsResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    repeated Comment list = 1;
+    Pagination pagination = 2;
+  }
+}
+
+message DeleteCommentRequest { string id = 1; }
+
+message LikeCommentRequest {
+  string id = 1;
+  string action = 2; // "like" | "unlike"
+}
+
+message LikeCommentResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    int32 current_like_count = 1;
+    bool is_liked = 2;
+  }
+}
+
+// ---------------------
+// Reports
+// ---------------------
+
+message CreateReportRequest {
+  string target_type = 1; 
+  string target_id = 2;
+  string reason = 3; 
+  string description = 4;
+}
+
+message CreateReportResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    string report_id = 1;
+  }
+}
+
+// ---------------------
+// Admin
+// ---------------------
+
+message AdminListReportsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string status = 3;
+  string target_type = 4;
+}
+
+message AdminListReportsResponse {
+  int32 code = 1;
+  string message = 2;
+  Data data = 3;
+
+  message Data {
+    repeated ReportItem list = 1;
+    Pagination pagination = 2;
+  }
+}
+
+message AdminUpdatePostStatusRequest {
+  string id = 1;
+  string status = 2; 
+  string notes = 3;
+}
+
+// ======================================
+// 3. 业务实体
+// ======================================
+
+message PostLite {
+  string id = 1;
+  string title = 2;
+  UserLite author = 3;
+  string board_id = 4;
+  string board_name = 5;
+  string created_at = 6;
+  repeated string tags = 7;
+  string cover_image_url = 8;
+  string summary = 9;
+  PostStats stats = 10;
+  UserInteraction user_interaction = 11;
+}
+
+message PostDetail {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string board_id = 4;
+  string board_name = 5;
+  UserLite author = 6;
+  repeated string tags = 7;
+  repeated MediaItem media = 8;
+  PostStats stats = 9;
+  UserInteraction user_interaction = 10;
+  string status = 11; 
+  int32 report_count = 12;
+  string created_at = 13;
+  string last_replied_at = 14;
+}
+
+message Comment {
+  string id = 1;
+  string post_id = 2;
+  UserLite author = 3;
+  string content = 4;
+  string parent_id = 5;
+  UserLite reply_to = 6;
+
+  message CommentStats {
+    int32 like_count = 1;
+  }
+  CommentStats stats = 7;
+  UserInteraction user_interaction = 8;
+  string created_at = 9;
+}
+
+message ReportItem {
+  string id = 1;
+  string target_id = 2;
+  string target_type = 3;
+  string reason = 4;
+  string status = 5;
+  string snippet = 6;
+  string author_name = 7;
+  int32 report_count_on_target = 8;
+}
+
+message UserLite {
+  string id = 1;
+  string student_id = 2;
+  string name = 3;
+  string avatar_url = 4;
+  string college = 5;
+}
+
+message MediaItem {
+  string type = 1;
+  string url = 2;
+  string thumbnail_url = 3;
+  MediaMeta meta = 4;
+}
+
+message MediaMeta {
+  string size = 1;
+  string width = 2;
+  string height = 3;
+  string filename = 4;
+}
+
+message Pagination {
+  int32 total = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 pages = 4;
+}
+
+message PostStats {
+  int32 view_count = 1;
+  int32 like_count = 2;
+  int32 comment_count = 3;
+}
+
+message UserInteraction {
+  bool is_liked = 1;
+  bool is_collected = 2;
+}

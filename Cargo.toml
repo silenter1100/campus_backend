@@ -26,3 +26,7 @@ dotenv = "0.15"
 # 6. 日志追踪 (Tracing) - 类似于 Log4j/Slf4j
 tracing = "0.1"
 tracing-subscriber = "0.3"
+
+[build-dependencies]
+tonic-build = "0.12"
+protoc-bin-vendored = "3.0"
