@@ -3,22 +3,24 @@ name = "campus_backend"
 version = "0.1.0"
 edition = "2021"
 
-# 请确保 dependencies 只有这一个区域，不要重复
+[lib]
+name = "campus_backend"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]  # cdylib 用于 iOS/Android FFI，rlib 用于 Rust 内部
+
 [dependencies]
 # 1. Web 框架 (Axum) - 类似于 Spring Boot Web
 axum = "0.7"
 
 # 2. 异步运行时 (Tokio) - Rust 的核心引擎
-# "full" 开启所有功能，包括多线程调度、IO 驱动等
 tokio = { version = "1", features = ["full"] }
 
 # 3. 序列化库 (Serde) - 类似于 Jackson/Gson
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# 4. 数据库连接 (SQLx) - 类似于 MyBatis/Hibernate 的底层驱动
-# 这里指定使用 mysql，并开启 runtime-tokio
-sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-native-tls", "mysql" ] }
+# 4. 数据库连接 (SQLx) - 类似于 MyBatis 的查询构建器
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "mysql", "macros", "chrono", "uuid"] }
 
 # 5. 环境变量 (Dotenv) - 用于读取 .env 文件里的数据库密码
 dotenv = "0.15"
@@ -26,3 +28,36 @@ dotenv = "0.15"
 # 6. 日志追踪 (Tracing) - 类似于 Log4j/Slf4j
 tracing = "0.1"
 tracing-subscriber = "0.3"
+
+# 7. 中间件支持 (Tower) - CORS、日志等
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# 8. 时间处理 (Chrono) - 类似于 Java 的 LocalDateTime
+chrono = { version = "0.4", features = ["serde"] }
+
+# 9. UUID 生成 - 用于生成唯一 ID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# 10. 密码加密 (Bcrypt) - 用于用户密码哈希
+bcrypt = "0.15"
+
+# 11. JWT 认证 (可选，如果需要 token 认证)
+jsonwebtoken = "9"
+
+# 12. Redis 客户端 - 用于缓存、会话管理、分布式锁
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# 13. UniFFI - 用于生成跨语言 FFI 绑定（Kotlin/Swift/Python）
+uniffi = { version = "0.28", features = ["cli"] }
+
+# 14. Protocol Buffers (Protobuf) - 二进制序列化，用于客户端通信
+prost = "0.12"
+prost-types = "0.12"
+
+# 15. Bincode - Rust 专用二进制序列化，用于 Redis 缓存
+bincode = "1.3"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+prost-build = "0.12"  # 用于编译 .proto 文件
