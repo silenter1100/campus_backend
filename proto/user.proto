@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+package campus.user;
+
+import "google/protobuf/empty.proto";
+
+// ==================== 基础数据模型 ====================
+
+// 用户信息
+message User {
+  int64 id = 1;
+  string student_id = 2;
+  string name = 3;
+  string avatar_url = 4;                // 头像
+  string role = 5;
+  string college = 6;
+  string major = 7;
+  string grade = 8;
+  string class_name = 9;
+  string bio = 10;                      // 简介
+  string phone = 11;
+  string email = 12;
+  string wechat_id = 13;
+  int32 weekly_course_count = 14;       // 本周课时数
+  int32 forum_activity_score = 15;      // 论坛活跃度
+  int32 collection_count = 16;          // 收藏数
+  string setting_privacy_course = 17;   // 课表隐私
+  bool setting_notification_switch = 18;// 通知开关
+}
+
+// 登录成功返回数据
+message LoginData {
+  string token = 1;
+  User user = 2;
+}
+
+// 注册成功返回数据
+message RegisterData {
+  int64 user_id = 1;
+}
+
+// 批量注册成功项
+message ImportSuccessItem {
+  int32 row = 1;                 // 行号
+  string student_id = 2;         // 学号
+  string name = 3;               // 姓名
+  string status = 4;             // 状态
+  string initial_password = 5;   // 自动生成密码
+  bool email_sent = 6;           // 是否发送邮件
+}
+
+// 批量注册失败项
+message ImportFailedItem {
+  int32 row = 1;                 // 行号
+  string student_id = 2;         // 学号
+  string name = 3;               // 姓名
+  string error = 4;              // 错误信息
+  string status = 5;             // 状态
+}
+
+// 批量注册详情
+message ImportDetails {
+  repeated ImportSuccessItem success_list = 1;  // 成功列表
+  repeated ImportFailedItem failed_list = 2;    // 失败列表
+}
+
+// 批量注册返回数据
+message ImportData {
+  int32 success_count = 1;    // 成功数量
+  int32 failed_count = 2;     // 失败数量
+  int32 total_count = 3;      // 总数量
+  string file_name = 4;       // 文件名
+  string import_time = 5;     // 导入时间
+  ImportDetails details = 6;  // 详情
+}
+
+// ==================== 请求消息 ====================
+
+// 用户登录请求
+message LoginRequest {
+  string student_id = 1;
+  string password = 2;
+}
+
+// 用户注册请求
+message RegisterRequest {
+  string student_id = 1;
+  string password = 2;
+  string name = 3;
+  string college = 4;
+  string major = 5;
+  string phone = 6;
+}
+
+// 获取当前用户信息请求
+message GetUserInfoRequest {
+  // 该请求不需要请求参数，通过Token识别用户
+}
+
+// 更新个人资料请求
+message UpdateProfileRequest {
+  string name = 1;
+  string avatar_url = 2;
+  string bio = 3;
+  string phone = 4;
+  string email = 5;
+  string wechat_id = 6;
+  string setting_privacy_course = 7;
+  bool setting_notification_switch = 8;
+}
+
+// 退出登录请求
+message LogoutRequest {
+  // 该请求不需要请求参数，通过Token识别用户
+}
+
+// 修改密码请求
+message ChangePasswordRequest {
+  string old_password = 1;  // 旧密码
+  string new_password = 2;  // 新密码
+}
+
+// 批量注册请求
+message BatchRegisterRequest {
+  bytes file = 1;  // Excel/CSV格式的用户数据文件
+  string file_name = 2;  // 文件名
+}
+
+// 删除账号请求
+message DeleteUserRequest {
+  string id = 1;  // 用户ID
+}
+
+// ==================== 响应消息 ====================
+
+// 用户登录响应
+message LoginResponse {
+  int32 code = 1;
+  string message = 2;
+  LoginData data = 3;
+}
+
+// 用户注册响应
+message RegisterResponse {
+  int32 code = 1;
+  string message = 2;
+  RegisterData data = 3;
+}
+
+// 获取当前用户信息响应
+message GetUserInfoResponse {
+  int32 code = 1;
+  string message = 2;
+  User data = 3;
+}
+
+// 更新个人资料响应
+message UpdateProfileResponse {
+  int32 code = 1;
+  string message = 2;
+  google.protobuf.Empty data = 3;  // data字段为null
+}
+
+// 退出登录响应
+message LogoutResponse {
+  int32 code = 1;
+  string message = 2;
+  google.protobuf.Empty data = 3;  // data字段为null
+}
+
+// 修改密码响应
+message ChangePasswordResponse {
+  int32 code = 1;
+  string message = 2;
+  google.protobuf.Empty data = 3;  // data字段为null
+}
+
+// 批量注册响应
+message BatchRegisterResponse {
+  int32 code = 1;
+  string message = 2;
+  ImportData data = 3;  // 批量注册结果数据
+}
+
+// 删除账号响应
+message DeleteUserResponse {
+  int32 code = 1;
+  string message = 2;
+  google.protobuf.Empty data = 3;  // data字段为null
+}
