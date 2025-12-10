@@ -1,6 +1,6 @@
 use crate::common::AppError;
 use super::entity::*;
-use sqlx::{MySqlPool, types::Json, Row};
+use sqlx::{MySqlPool, Row, types::Json};
 
 // ==================== 学期相关 ====================
 
@@ -107,8 +107,8 @@ pub async fn get_public_courses(
     let rows = data_query_builder.fetch_all(pool).await?;
 
     let courses = rows.into_iter().map(|row| {
-        let weeks_json: String = row.get("weeks_range");
-        let weeks_range: Vec<i32> = serde_json::from_str(&weeks_json).unwrap_or_default();
+        let weeks_json: Json<Vec<i32>> = row.get("weeks_range");
+        let weeks_range = weeks_json.0;
         
         PublicCourse {
             id: row.get("id"),
@@ -182,8 +182,8 @@ pub async fn get_user_schedule(
     };
 
     let items = rows.into_iter().map(|row| {
-        let weeks_json: String = row.get("weeks_range");
-        let weeks_range: Vec<i32> = serde_json::from_str(&weeks_json).unwrap_or_default();
+        let weeks_json: Json<Vec<i32>> = row.get("weeks_range");
+        let weeks_range = weeks_json.0;
         
         ScheduleItem {
             id: row.get("id"),
@@ -275,8 +275,8 @@ async fn check_time_conflict(
 
     // 检查周次是否重叠
     for row in rows {
-        let weeks_json: String = row.get("weeks_range");
-        let conflict_weeks: Vec<i32> = serde_json::from_str(&weeks_json).unwrap_or_default();
+        let weeks_json: Json<Vec<i32>> = row.get("weeks_range");
+        let conflict_weeks = weeks_json.0;
         if weeks.iter().any(|w| conflict_weeks.contains(w)) {
             return Ok(true); // 存在冲突
         }
@@ -447,8 +447,8 @@ pub async fn update_schedule_item(
     let existing = row.ok_or_else(|| AppError::NotFound("课表项不存在".to_string()))?;
 
     // 解析现有数据
-    let existing_weeks_json: String = existing.get("weeks_range");
-    let existing_weeks: Vec<i32> = serde_json::from_str(&existing_weeks_json).unwrap_or_default();
+    let existing_weeks_json: Json<Vec<i32>> = existing.get("weeks_range");
+    let existing_weeks = existing_weeks_json.0;
 
     // 合并更新字段
     let course_name = input.course_name.unwrap_or_else(|| existing.get("course_name"));

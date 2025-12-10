@@ -1,5 +1,6 @@
 mod controller;
-mod entity;
-mod service;
+pub mod entity;
+pub mod service;
+pub mod repository;
 
 pub use controller::routes;

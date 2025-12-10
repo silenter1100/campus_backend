@@ -58,7 +58,7 @@ pub struct ScheduleItemDb {
 // ==================== API 响应实体 ====================
 
 /// 学期信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Semester {
     pub id: i64,
     pub name: String,

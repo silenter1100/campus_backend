@@ -14,8 +14,10 @@ pub enum AppError {
     /// 请求参数错误
     BadRequest(String),
     /// 未授权
+    #[allow(dead_code)]
     Unauthorized(String),
     /// 内部服务器错误
+    #[allow(dead_code)]
     InternalError(String),
     /// Protobuf 解析错误
     ProtobufError(prost::DecodeError),

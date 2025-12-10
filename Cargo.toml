@@ -58,6 +58,23 @@ prost-types = "0.12"
 # 15. Bincode - Rust 专用二进制序列化，用于 Redis 缓存
 bincode = "1.3"
 
+# 16. Async trait - 用于异步 trait
+async-trait = "0.1"
+
+[dev-dependencies]
+# 测试框架
+tokio-test = "0.4"  # Tokio 测试工具
+rstest = "0.18"  # 参数化测试
+mockall = "0.12"  # Mock 框架
+wiremock = "0.6"  # HTTP Mock
+fake = { version = "2.9", features = ["derive", "chrono"] }  # 假数据生成
+serial_test = "3.0"  # 串行测试（避免数据库冲突）
+
+# HTTP 测试客户端
+axum-test = "14.0"  # Axum 集成测试
+tower = { version = "0.4", features = ["util"] }
+hyper = { version = "1.0", features = ["full"] }
+
 [build-dependencies]
 uniffi = { version = "0.28", features = ["build"] }
 prost-build = "0.12"  # 用于编译 .proto 文件
