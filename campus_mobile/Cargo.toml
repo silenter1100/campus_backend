@@ -1,0 +1,19 @@
+[package]
+name = "campus_mobile"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# "staticlib" 是 iOS 需要的静态库格式
+# "cdylib" 是 Android 或其他平台需要的动态库格式
+crate-type = ["staticlib", "cdylib"]
+name = "campus_mobile" # 生成的库名字
+
+[dependencies]
+# 核心库
+uniffi = { version = "0.28", features = ["cli"] }
+
+# 你的业务逻辑需要的库 (比如这个超快的字符串匹配库)
+aho-corasick = "1.0"
+# 新增这个处理时间
+chrono = "0.4"
