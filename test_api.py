@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""
+课表模块 API 测试脚本
+使用方法：
+1. 安装依赖：pip install requests protobuf
+2. 编译 proto：protoc --python_out=. proto/course.proto
+3. 运行测试：python test_api.py
+"""
+
+import requests
+import sys
+import os
+
+# 添加生成的 proto 文件路径
+sys.path.insert(0, os.path.dirname(__file__))
+
+try:
+    from proto import course_pb2
+except ImportError:
+    print("错误：找不到 course_pb2 模块")
+    print("请先运行：protoc --python_out=. proto/course.proto")
+    sys.exit(1)
+
+BASE_URL = "http://localhost:3000"
+
+def print_separator(title):
+    print("\n" + "="*60)
+    print(f"  {title}")
+    print("="*60)
+
+def test_get_semesters():
+    """测试获取学期列表"""
+    print_separator("测试：获取学期列表")
+    
+    response = requests.get(
+        f"{BASE_URL}/api/v1/semesters",
+        headers={'Accept': 'application/x-protobuf'}
+    )
+    
+    print(f"状态码: {response.status_code}")
+    print(f"Content-Type: {response.headers.get('Content-Type')}")
+    
+    if response.status_code == 200:
+        result = course_pb2.GetSemestersResponse()
+        result.ParseFromString(response.content)
+        
+        print(f"\n响应码: {result.code}")
+        print(f"消息: {result.message}")
+        print(f"\n学期列表 (共 {len(result.data.semesters)} 个):")
+        for semester in result.data.semesters:
+            current = "✓ 当前学期" if semester.is_current else ""
+            print(f"  - ID: {semester.id}, 名称: {semester.name} {current}")
+            print(f"    时间: {semester.start_date} ~ {semester.end_date}")
+    else:
+        print(f"请求失败: {response.text}")
+
+def test_get_public_courses(semester_id=None, page=1, page_size=5):
+    """测试获取全校课程"""
+    print_separator("测试：获取全校课程")
+    
+    params = {
+        'page': page,
+        'pageSize': page_size
+    }
+    if semester_id:
+        params['semester_id'] = semester_id
+    
+    response = requests.get(
+        f"{BASE_URL}/api/v1/courses",
+        params=params,
+        headers={'Accept': 'application/x-protobuf'}
+    )
+    
+    print(f"状态码: {response.status_code}")
+    
+    if response.status_code == 200:
+        result = course_pb2.GetPublicCoursesResponse()
+        result.ParseFromString(response.content)
+        
+        print(f"\n响应码: {result.code}")
+        print(f"消息: {result.message}")
+        print(f"\n分页信息:")
+        print(f"  总数: {result.data.pagination.total}")
+        print(f"  当前页: {result.data.pagination.page}/{result.data.pagination.pages}")
+        print(f"\n课程列表:")
+        for course in result.data.list:
+            print(f"  - {course.course_name} ({course.teacher_name})")
+            print(f"    时间: 周{course.day_of_week} 第{course.start_section}-{course.end_section}节")
+            print(f"    地点: {course.location}")
+    else:
+        print(f"请求失败: {response.text}")
+
+def test_get_schedule(semester_id, week=None):
+    """测试获取用户课表"""
+    print_separator("测试：获取用户课表")
+    
+    params = {'semester_id': semester_id}
+    if week:
+        params['week'] = week
+    
+    response = requests.get(
+        f"{BASE_URL}/api/v1/schedule",
+        params=params,
+        headers={'Accept': 'application/x-protobuf'}
+    )
+    
+    print(f"状态码: {response.status_code}")
+    
+    if response.status_code == 200:
+        result = course_pb2.GetScheduleResponse()
+        result.ParseFromString(response.content)
+        
+        print(f"\n响应码: {result.code}")
+        print(f"消息: {result.message}")
+        print(f"\n课表项 (共 {len(result.data.items)} 项):")
+        for item in result.data.items:
+            custom = "✓ 自定义" if item.is_custom else ""
+            print(f"  - {item.course_name} ({item.teacher_name}) {custom}")
+            print(f"    时间: 周{item.day_of_week} 第{item.start_section}-{item.end_section}节")
+            print(f"    地点: {item.location}")
+            if item.color_hex:
+                print(f"    颜色: {item.color_hex}")
+    else:
+        print(f"请求失败: {response.text}")
+
+def test_add_schedule_items(semester_id):
+    """测试添加课表项"""
+    print_separator("测试：添加课表项")
+    
+    # 构造请求
+    request = course_pb2.AddScheduleItemsRequest(
+        semester_id=semester_id,
+        items=[
+            course_pb2.ScheduleItemInput(
+                source_id=1,                   
+                course_name="高等数学A",
+                teacher_name="张教授",
+                location="教学楼A-101",
+                day_of_week=1,
+                start_section=1,
+                end_section=2,
+                weeks=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                type="compulsory",              
+                credits=4,
+                description="高等数学基础课程",
+                color_hex="#000000",            # 默认颜色（可选）
+                is_custom=False                 # 默认非自定义
+            ),
+            course_pb2.ScheduleItemInput(
+                course_name="自定义课程B",
+                teacher_name="李老师",
+                location="图书馆",
+                day_of_week=6,
+                start_section=5,
+                end_section=6,
+                weeks=[10],
+                type="选修",
+                credits=2,
+                color_hex="#33FF57",
+                is_custom=True
+            ),
+            course_pb2.ScheduleItemInput(
+            
+            course_name="测试课程B",  # 新课程名称
+            teacher_name="李老师",  # 假设是另一位教师
+            location="教学楼A101",  # 同一地点
+            day_of_week=1,  # 星期一
+            start_section=1,  # 开始节次相同
+            end_section=2,  # 结束节次相同
+            weeks=[8, 9, 11, 12, 13, 14],  # 不重合的周数组
+            type="选修",  # 或者"必修"，根据实际需求
+            credits=2,  # 学分可以根据实际情况调整
+            description="这是另一个测试课程",
+            color_hex="#33FF57",  # 不同颜色以区分
+            is_custom=True
+             )
+        ]
+    )
+    
+    response = requests.post(
+        f"{BASE_URL}/api/v1/schedule",
+        headers={'Content-Type': 'application/x-protobuf'},
+        data=request.SerializeToString()
+    )
+    
+    print(f"状态码: {response.status_code}")
+    
+    if response.status_code == 200:
+        result = course_pb2.AddScheduleItemsResponse()
+        result.ParseFromString(response.content)
+        
+        print(f"\n响应码: {result.code}")
+        print(f"消息: {result.message}")
+        print(f"\n成功添加 {len(result.data.successful_items)} 项:")
+        for item in result.data.successful_items:
+            print(f"  - ID: {item.id}, 课程: {item.course_name}")
+        
+        if result.data.failed_items:
+            print(f"\n失败 {len(result.data.failed_items)} 项:")
+            for item in result.data.failed_items:
+                print(f"  - 课程: {item.course_name}, 错误: {item.error_message}")
+    else:
+        print(f"请求失败: {response.text}")
+
+def test_update_schedule_item(item_id):
+    """测试更新课表项"""
+    print_separator("测试：更新课表项")
+    
+    request = course_pb2.UpdateScheduleItemRequest(
+        course_name="更新后的课程名",
+        teacher_name="王老师",
+        location="新教学楼B202",
+        day_of_week=2,
+        start_section=3,
+        end_section=4,
+        weeks=[1,2,3,4,5,6,7,8,10],
+        type="必修",
+        credits=4,
+        description="课程已更新",
+        color_hex="#3357FF"
+    )
+    
+    response = requests.patch(
+        f"{BASE_URL}/api/v1/schedule",
+        params={'item_id': item_id},
+        headers={'Content-Type': 'application/x-protobuf'},
+        data=request.SerializeToString()
+    )
+    
+    print(f"状态码: {response.status_code}")
+    
+    if response.status_code == 200:
+        result = course_pb2.UpdateScheduleItemResponse()
+        result.ParseFromString(response.content)
+        
+        print(f"\n响应码: {result.code}")
+        print(f"消息: {result.message}")
+        print(f"\n更新后的课表项:")
+        item = result.data.item
+        print(f"  - ID: {item.id}")
+        print(f"  - 课程: {item.course_name} ({item.teacher_name})")
+        print(f"  - 时间: 周{item.day_of_week} 第{item.start_section}-{item.end_section}节")
+    else:
+        print(f"请求失败: {response.text}")
+
+def test_delete_schedule_item(item_id):
+    """测试删除课表项"""
+    print_separator("测试：删除课表项")
+    
+    response = requests.delete(
+        f"{BASE_URL}/api/v1/schedule",
+        params={'item_id': item_id}
+    )
+    
+    print(f"状态码: {response.status_code}")
+    
+    if response.status_code == 200:
+        result = course_pb2.DeleteScheduleItemResponse()
+        result.ParseFromString(response.content)
+        
+        print(f"\n响应码: {result.code}")
+        print(f"消息: {result.message}")
+    else:
+        print(f"请求失败: {response.text}")
+
+def main():
+    print("\n" + "🎓 课表模块 API 测试工具".center(60))
+    
+    try:
+        # 1. 获取学期列表
+        test_get_semesters()
+        
+        # 2. 获取全校课程
+        test_get_public_courses(page=1, page_size=3)
+        
+        # 3. 获取用户课表
+        test_get_schedule(semester_id=1)
+        
+        # 4. 添加课表项
+        test_add_schedule_items(semester_id=1)
+
+        # 4.1 再次获取课表
+        test_get_schedule(semester_id=1)
+        
+        # 5. 更新课表项 (需要先有数据)
+        test_update_schedule_item(item_id=2)
+        
+        # 6. 删除课表项 (需要先有数据)
+        test_delete_schedule_item(item_id=2)
+        
+        print_separator("测试完成")
+        
+    except requests.exceptions.ConnectionError:
+        print("\n❌ 错误：无法连接到服务器")
+        print("请确保服务器正在运行：cargo run")
+    except Exception as e:
+        print(f"\n❌ 错误：{e}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    main()
