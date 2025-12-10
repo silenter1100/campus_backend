@@ -1,5 +1,4 @@
 use axum::{
-    body::Bytes,
     extract::{Query, State},
     http::{header, StatusCode},
     response::IntoResponse,
@@ -7,69 +6,33 @@ use axum::{
     Router,
 };
 use prost::Message;
-use serde::Deserialize;
 use sqlx::MySqlPool;
 
 use crate::common::{auth::AuthUser, AppError};
+use crate::common::state::AppState;
+
 use super::{entity, service};
 
-// ======================================================
-//  Protobuf 模块（自动生成文件位于 OUT_DIR）
-// ======================================================
+// Protobuf
 mod proto;
 use proto::*;
 
-// ======================================================
-//  路由注册
-// ======================================================
-
-pub fn routes() -> Router<MySqlPool> {
+/// 注册课程模块路由
+pub fn router() -> Router<AppState> {
     Router::new()
-        // 公共接口
         .route("/api/v1/semesters", get(get_semesters_handler))
         .route("/api/v1/courses", get(get_public_courses_handler))
-        // 需要认证
         .route("/api/v1/schedule", get(get_schedule_handler))
         .route("/api/v1/schedule", post(add_schedule_items_handler))
         .route("/api/v1/schedule", patch(update_schedule_item_handler))
         .route("/api/v1/schedule", delete(delete_schedule_item_handler))
 }
 
-// ======================================================
-// 查询参数
-// ======================================================
-
-#[derive(Debug, Deserialize)]
-struct GetCoursesQuery {
-    semester_id: Option<i64>,
-    name: Option<String>,
-    teacher: Option<String>,
-    page: Option<i32>,
-    #[serde(rename = "pageSize")]
-    page_size: Option<i32>,
-}
-
-#[derive(Debug, Deserialize)]
-struct GetScheduleQuery {
-    semester_id: i64,
-    week: Option<i32>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ItemIdQuery {
-    item_id: i64,
-}
-
-// ======================================================
-// 处理函数
-// ======================================================
-
-
 /// 获取学期列表
 async fn get_semesters_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    let semesters = service::get_semesters(&pool).await?;
+    let semesters = service::get_semesters(&state.pool).await?;
 
     let proto_semesters: Vec<Semester> = semesters
         .into_iter()
@@ -85,22 +48,19 @@ async fn get_semesters_handler(
     let response = GetSemestersResponse {
         code: 200,
         message: "成功".to_string(),
-        data: Some(GetSemestersData {
-            semesters: proto_semesters,
-        }),
+        data: Some(GetSemestersData { semesters: proto_semesters }),
     };
 
-    let bytes = response.encode_to_vec();
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/x-protobuf")],
-        bytes,
+        response.encode_to_vec(),
     ))
 }
 
 /// 获取全校课程
 async fn get_public_courses_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<GetCoursesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     let params = entity::GetCoursesParams {
@@ -111,7 +71,7 @@ async fn get_public_courses_handler(
         page_size: query.page_size.unwrap_or(20),
     };
 
-    let (courses, pagination) = service::get_public_courses(&pool, params).await?;
+    let (courses, pagination) = service::get_public_courses(&state.pool, params).await?;
 
     let proto_courses: Vec<PublicCourse> = courses
         .into_iter()
@@ -145,23 +105,22 @@ async fn get_public_courses_handler(
         }),
     };
 
-    let bytes = response.encode_to_vec();
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/x-protobuf")],
-        bytes,
+        response.encode_to_vec(),
     ))
 }
 
 /// 获取用户课表
 async fn get_schedule_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<GetScheduleQuery>,
     auth_user: AuthUser,
 ) -> Result<impl IntoResponse, AppError> {
     let user_id = auth_user.user_id;
 
-    let items = service::get_user_schedule(&pool, user_id, query.semester_id, query.week).await?;
+    let items = service::get_user_schedule(&state.pool, user_id, query.semester_id, query.week).await?;
 
     let proto_items: Vec<ScheduleItem> = items
         .into_iter()
@@ -189,19 +148,18 @@ async fn get_schedule_handler(
         data: Some(GetScheduleData { items: proto_items }),
     };
 
-    let bytes = response.encode_to_vec();
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/x-protobuf")],
-        bytes,
+        response.encode_to_vec(),
     ))
 }
 
-/// 批量添加课表项
+/// 批量增加课表项
 async fn add_schedule_items_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     auth_user: AuthUser,
-    body: Bytes,
+    body: axum::body::Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     let proto_req = AddScheduleItemsRequest::decode(body)?;
 
@@ -225,11 +183,9 @@ async fn add_schedule_items_handler(
         })
         .collect();
 
-    let user_id = auth_user.user_id;
-    let result = service::add_schedule_items(&pool, user_id, proto_req.semester_id, items).await?;
+    let result = service::add_schedule_items(&state.pool, auth_user.user_id, proto_req.semester_id, items).await?;
 
-    let successful_items: Vec<ScheduleItem> = result
-        .successful_items
+    let successful_items: Vec<ScheduleItem> = result.successful_items
         .into_iter()
         .map(|item| ScheduleItem {
             id: item.id,
@@ -249,8 +205,7 @@ async fn add_schedule_items_handler(
         })
         .collect();
 
-    let failed_items: Vec<FailedItem> = result
-        .failed_items
+    let failed_items: Vec<FailedItem> = result.failed_items
         .into_iter()
         .map(|item| FailedItem {
             course_name: item.course_name,
@@ -258,39 +213,28 @@ async fn add_schedule_items_handler(
         })
         .collect();
 
-    let message = if failed_items.is_empty() {
-        format!("成功添加 {} 项课程", successful_items.len())
-    } else {
-        format!(
-            "处理完成：成功 {} 项，失败 {} 项",
-            successful_items.len(),
-            failed_items.len()
-        )
-    };
-
     let response = AddScheduleItemsResponse {
         code: 200,
-        message,
+        message: "处理完成".into(),
         data: Some(AddScheduleItemsData {
             successful_items,
             failed_items,
         }),
     };
 
-    let bytes = response.encode_to_vec();
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/x-protobuf")],
-        bytes,
+        response.encode_to_vec(),
     ))
 }
 
 /// 更新课表项
 async fn update_schedule_item_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<ItemIdQuery>,
     auth_user: AuthUser,
-    body: Bytes,
+    body: axum::body::Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     let proto_req = UpdateScheduleItemRequest::decode(body)?;
 
@@ -301,19 +245,20 @@ async fn update_schedule_item_handler(
         day_of_week: proto_req.day_of_week,
         start_section: proto_req.start_section,
         end_section: proto_req.end_section,
-        weeks: if proto_req.weeks.is_empty() {
-            None
-        } else {
-            Some(proto_req.weeks)
-        },
+        weeks: if proto_req.weeks.is_empty() { None } else { Some(proto_req.weeks) },
         r#type: proto_req.r#type,
         credits: proto_req.credits,
         description: proto_req.description,
         color_hex: proto_req.color_hex,
     };
 
-    let user_id = auth_user.user_id;
-    let item = service::update_schedule_item(&pool, user_id, query.item_id, input).await?;
+    let item = service::update_schedule_item(
+        &state.pool,
+        auth_user.user_id,
+        query.item_id,
+        input,
+    )
+        .await?;
 
     let proto_item = ScheduleItem {
         id: item.id,
@@ -335,38 +280,32 @@ async fn update_schedule_item_handler(
     let response = UpdateScheduleItemResponse {
         code: 200,
         message: "更新成功".to_string(),
-        data: Some(UpdateScheduleItemData {
-            item: Some(proto_item),
-        }),
+        data: Some(UpdateScheduleItemData { item: Some(proto_item) }),
     };
 
-    let bytes = response.encode_to_vec();
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/x-protobuf")],
-        bytes,
+        response.encode_to_vec(),
     ))
 }
 
 /// 删除课表项
 async fn delete_schedule_item_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<ItemIdQuery>,
     auth_user: AuthUser,
 ) -> Result<impl IntoResponse, AppError> {
-    let user_id = auth_user.user_id;
-
-    service::delete_schedule_item(&pool, user_id, query.item_id).await?;
+    service::delete_schedule_item(&state.pool, auth_user.user_id, query.item_id).await?;
 
     let response = DeleteScheduleItemResponse {
         code: 200,
         message: "删除成功".to_string(),
     };
 
-    let bytes = response.encode_to_vec();
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/x-protobuf")],
-        bytes,
+        response.encode_to_vec(),
     ))
 }

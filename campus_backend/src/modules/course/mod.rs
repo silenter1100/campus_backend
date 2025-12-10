@@ -1,6 +1,6 @@
-mod controller;
+pub mod controller;
 pub mod entity;
 pub mod service;
 mod proto;
 
-pub use controller::routes;
+pub use controller::router;

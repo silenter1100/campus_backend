@@ -487,6 +487,7 @@ dependencies = [
  "bincode",
  "chrono",
  "dotenv",
+ "dotenvy",
  "fake",
  "hyper 1.8.1",
  "image",
