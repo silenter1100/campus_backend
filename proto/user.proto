@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package campus.user;
 
-import "google/protobuf/empty.proto";
 
 // ==================== 基础数据模型 ====================
 
@@ -21,9 +20,9 @@ message User {
   string phone = 11;
   string email = 12;
   string wechat_id = 13;
-  int32 weekly_course_count = 14;       // 本周课时数
-  int32 forum_activity_score = 15;      // 论坛活跃度
-  int32 collection_count = 16;          // 收藏数
+  int64 weekly_course_count = 14;       // 本周课时数
+  int64 forum_activity_score = 15;      // 论坛活跃度
+  int64 collection_count = 16;          // 收藏数
   string setting_privacy_course = 17;   // 课表隐私
   bool setting_notification_switch = 18;// 通知开关
 }
@@ -158,21 +157,18 @@ message GetUserInfoResponse {
 message UpdateProfileResponse {
   int32 code = 1;
   string message = 2;
-  google.protobuf.Empty data = 3;  // data字段为null
 }
 
 // 退出登录响应
 message LogoutResponse {
   int32 code = 1;
   string message = 2;
-  google.protobuf.Empty data = 3;  // data字段为null
 }
 
 // 修改密码响应
 message ChangePasswordResponse {
   int32 code = 1;
   string message = 2;
-  google.protobuf.Empty data = 3;  // data字段为null
 }
 
 // 批量注册响应
@@ -186,5 +182,5 @@ message BatchRegisterResponse {
 message DeleteUserResponse {
   int32 code = 1;
   string message = 2;
-  google.protobuf.Empty data = 3;  // data字段为null
 }
+
