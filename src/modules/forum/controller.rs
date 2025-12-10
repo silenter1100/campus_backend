@@ -33,20 +33,17 @@ pub async fn list_boards(State(pool): State<DBPool>) -> Result<impl IntoResponse
 pub async fn create_post(
     State(pool): State<DBPool>,
     headers: HeaderMap,
-    // 强制要求登录，如果中间件没注入 UserID，Axum 会拒绝请求
     Extension(user_id): Extension<String>, 
     Json(req): Json<CreatePostRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    // 简单检查 Idempotency-Key 是否存在（具体逻辑可视需求扩展）
     if !headers.contains_key("Idempotency-Key") {
         return Err(AppError::BadRequest("Missing Idempotency-Key header".into()));
     }
 
     let post_id = ForumService::create_post(&pool, &user_id, req).await?;
-    
-    // 创建成功后，返回完整的帖子详情
     let post = ForumService::get_post_detail(&pool, &post_id, Some(&user_id)).await?;
-    Ok(success_response(json!({ "post": post })))
+
+    Ok(success_response(post))
 }
 
 pub async fn list_posts(
@@ -85,10 +82,12 @@ pub async fn delete_post(
 pub async fn update_post(
     State(pool): State<DBPool>,
     Path(id): Path<String>,
+    Extension(user_id): Extension<String>,
     Json(req): Json<UpdatePostRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     ForumService::update_post(&pool, &id, req).await?;
-    Ok(success_response(json!({ "id": id, "status": "updated" })))
+    let post = ForumService::get_post_detail(&pool, &id, Some(&user_id)).await?;
+    Ok(success_response(post))
 }
 
 // =========================================================================
@@ -113,11 +112,9 @@ pub async fn collect_post(
     Extension(user_id): Extension<String>,
     Json(req): Json<CollectActionRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    // 接收 Service 返回的 (是否收藏, 总收藏数)
-    let (is_collected, total_count) = ForumService::toggle_collect_post(&pool, &id, &user_id, &req.action).await?;
+    let (is_collected, _total_count) = ForumService::toggle_collect_post(&pool, &id, &user_id, &req.action).await?;
     
     Ok(success_response(json!({
-        "current_collection_count": total_count,
         "is_collected": is_collected
     })))
 }

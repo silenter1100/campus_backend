@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package forum.v1;
+package forum;
 
 // ======================================
 // 数据模型
@@ -21,11 +21,11 @@ message GetBoardsRequest {}
 message GetBoardsResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  GetBoardsData data = 3;
+}
 
-  message Data {
-    repeated Board list = 1;
-  }
+message GetBoardsData {
+  repeated Board list = 1;
 }
 
 message Board {
@@ -51,11 +51,7 @@ message CreatePostRequest {
 message CreatePostResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
-
-  message Data {
-    PostDetail post = 1;
-  }
+  PostDetail data = 3;
 }
 
 message UpdatePostRequest {
@@ -68,11 +64,7 @@ message UpdatePostRequest {
 message UpdatePostResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
-
-  message Data {
-    PostDetail post = 1;
-  }
+  PostDetail data = 3;
 }
 
 message ListPostsRequest {
@@ -87,12 +79,12 @@ message ListPostsRequest {
 message ListPostsResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  ListPostsData data = 3;
+}
 
-  message Data {
-    repeated PostLite list = 1;
-    Pagination pagination = 2;
-  }
+message ListPostsData {
+  repeated PostLite list = 1;
+  Pagination pagination = 2;
 }
 
 message GetPostRequest { string id = 1; }
@@ -114,12 +106,12 @@ message LikePostRequest {
 message LikePostResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  LikePostData data = 3;
+}
 
-  message Data {
-    int32 current_like_count = 1;
-    bool is_liked = 2;
-  }
+message LikePostData {
+  int32 current_like_count = 1;
+  bool is_liked = 2;
 }
 
 // Collect Post
@@ -131,11 +123,11 @@ message CollectPostRequest {
 message CollectPostResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  CollectPostData data = 3;
+}
 
-  message Data {
-    bool is_collected = 1;
-  }
+message CollectPostData {
+  bool is_collected = 1;
 }
 
 // ---------------------
@@ -145,18 +137,18 @@ message CollectPostResponse {
 message CreateCommentRequest {
   string post_id = 1;
   string content = 2;
-  string reply_to_comment_id = 3;
+  optional string reply_to_comment_id = 3;
 }
 
 message CreateCommentResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
-  
-  message Data {
-    string comment_id = 1;
-    Comment comment = 2;
-  }
+  CreateCommentData data = 3;
+}
+
+message CreateCommentData {
+  string comment_id = 1;
+  Comment comment = 2;
 }
 
 message ListCommentsRequest {
@@ -168,12 +160,12 @@ message ListCommentsRequest {
 message ListCommentsResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  ListCommentsData data = 3;
+}
 
-  message Data {
-    repeated Comment list = 1;
-    Pagination pagination = 2;
-  }
+message ListCommentsData {
+  repeated Comment list = 1;
+  Pagination pagination = 2;
 }
 
 message DeleteCommentRequest { string id = 1; }
@@ -186,12 +178,12 @@ message LikeCommentRequest {
 message LikeCommentResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  LikeCommentData data = 3;
+}
 
-  message Data {
-    int32 current_like_count = 1;
-    bool is_liked = 2;
-  }
+message LikeCommentData {
+  int32 current_like_count = 1;
+  bool is_liked = 2;
 }
 
 // ---------------------
@@ -208,11 +200,11 @@ message CreateReportRequest {
 message CreateReportResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  CreateReportData data = 3;
+}
 
-  message Data {
-    string report_id = 1;
-  }
+message CreateReportData {
+  string report_id = 1;
 }
 
 // ---------------------
@@ -229,12 +221,12 @@ message AdminListReportsRequest {
 message AdminListReportsResponse {
   int32 code = 1;
   string message = 2;
-  Data data = 3;
+  AdminListReportsData data = 3;
+}
 
-  message Data {
-    repeated ReportItem list = 1;
-    Pagination pagination = 2;
-  }
+message AdminListReportsData {
+  repeated ReportItem list = 1;
+  Pagination pagination = 2;
 }
 
 message AdminUpdatePostStatusRequest {

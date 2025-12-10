@@ -13,7 +13,17 @@ impl ForumService {
     pub async fn get_board_list(pool: &DBPool) -> Result<Vec<BoardVO>, AppError> {
         let boards = sqlx::query_as!(
             BoardVO,
-            r#"SELECT id, name, icon, description, type as board_type FROM boards WHERE is_deleted = 0 ORDER BY sort_order ASC"#
+            r#"
+            SELECT 
+                id, 
+                name, 
+                COALESCE(icon, '') as icon, 
+                COALESCE(description, '') as description, 
+                COALESCE(type, 'general') as board_type 
+            FROM boards 
+            WHERE is_deleted = 0 
+            ORDER BY sort_order ASC
+            "#
         )
         .fetch_all(pool)
         .await?;
@@ -61,9 +71,12 @@ impl ForumService {
 
         // 3. Insert Media
         for media in req.media {
-            let meta_json = media.meta;
+            let meta_json = serde_json::to_value(&media.meta).unwrap_or_default();
             sqlx::query!(
-                "INSERT INTO post_medias (post_id, type, url, thumbnail_url, meta) VALUES (?, ?, ?, ?, ?)",
+                r#"
+                INSERT INTO post_medias (post_id, type, url, thumbnail_url, meta) 
+                VALUES (?, ?, ?, ?, ?)
+                "#,
                 post_id,
                 media.media_type,
                 media.url,
@@ -118,9 +131,18 @@ impl ForumService {
         if let Some(media) = req.media {
             sqlx::query!("DELETE FROM post_medias WHERE post_id = ?", post_id).execute(&mut *tx).await?;
             for item in media {
+                let meta_json = serde_json::to_value(&item.meta).unwrap_or_default(); 
+                
                 sqlx::query!(
-                    "INSERT INTO post_medias (post_id, type, url, thumbnail_url, meta) VALUES (?, ?, ?, ?, ?)",
-                    post_id, item.media_type, item.url, item.thumbnail_url, item.meta
+                    r#"
+                    INSERT INTO post_medias (post_id, type, url, thumbnail_url, meta) 
+                    VALUES (?, ?, ?, ?, ?)
+                    "#,
+                    post_id, 
+                    item.media_type, 
+                    item.url, 
+                    item.thumbnail_url, 
+                    meta_json
                 ).execute(&mut *tx).await?;
             }
         }
@@ -250,7 +272,7 @@ impl ForumService {
             Some("hot") => qb.push(" ORDER BY s.view_count DESC, p.created_at DESC"),
             Some("latest") => qb.push(" ORDER BY p.last_replied_at DESC"),
             _ => qb.push(" ORDER BY p.created_at DESC"),
-        }
+        };
 
         // 🔥 步骤 3: 启用 LIMIT 和 OFFSET
         qb.push(" LIMIT ");
@@ -325,10 +347,16 @@ impl ForumService {
         let row = sqlx::query!(
             r#"
             SELECT 
-                p.id, p.title, p.content, p.status, p.created_at, p.last_replied_at,
+                p.id, p.title, p.content, 
+                COALESCE(p.status, 'approved') as status, -- 给 status 默认值
+                p.created_at, p.last_replied_at,
                 b.id as board_id, b.name as board_name,
-                u.id as u_id, u.student_id, u.name as u_name, u.avatar_url, u.college,
-                s.view_count, s.like_count, s.comment_count
+                u.id as u_id, u.student_id, u.name as u_name, 
+                COALESCE(u.avatar_url, '') as avatar_url, -- 给头像默认值
+                COALESCE(u.college, '') as college,       -- 给学院默认值
+                COALESCE(s.view_count, 0) as view_count,       -- 给统计数据默认值
+                COALESCE(s.like_count, 0) as like_count,
+                COALESCE(s.comment_count, 0) as comment_count
             FROM posts p
             JOIN boards b ON p.board_id = b.id
             JOIN users u ON p.author_id = u.id
@@ -342,11 +370,36 @@ impl ForumService {
         let tags = sqlx::query_scalar!("SELECT tag_name FROM post_tags WHERE post_id = ?", post_id)
             .fetch_all(pool).await?;
 
-        let media = sqlx::query_as!(
-            MediaItem, 
-            r#"SELECT type as media_type, url, thumbnail_url, meta FROM post_medias WHERE post_id = ?"#, 
+        // 使用 query! 获取原始数据
+        let rows = sqlx::query!(
+            r#"
+            SELECT type as media_type, url, thumbnail_url, meta 
+            FROM post_medias 
+            WHERE post_id = ?
+            "#, 
             post_id
-        ).fetch_all(pool).await?;
+        )
+        .fetch_all(pool)
+        .await?;
+
+        //  手动将其转换为 MediaItem
+        let media: Vec<MediaItem> = rows.into_iter().map(|row| {
+            let meta_struct: MediaMeta = row.meta
+                .and_then(|v| serde_json::from_value(v).ok())
+                .unwrap_or(MediaMeta { 
+                    size: None, 
+                    width: None, 
+                    height: None, 
+                    filename: None 
+                });
+
+            MediaItem {
+                media_type: row.media_type,
+                url: row.url,
+                thumbnail_url: row.thumbnail_url,
+                meta: meta_struct,
+            }
+        }).collect();
 
         // Interactions
         let (is_liked, is_collected) = if let Some(uid) = user_id {
@@ -369,17 +422,28 @@ impl ForumService {
                 id: row.u_id,
                 student_id: row.student_id,
                 name: row.u_name,
-                avatar_url: row.avatar_url,
+                avatar_url: row.avatar_url, 
                 college: row.college,
             },
             tags,
             media,
-            stats: PostStats { view_count: row.view_count, like_count: row.like_count, comment_count: row.comment_count },
+            stats: PostStats { 
+                // 修复点 1: 显式转换 i64 -> i32
+                view_count: row.view_count as i32, 
+                like_count: row.like_count as i32, 
+                comment_count: row.comment_count as i32 
+            },
             user_interaction: UserInteraction { is_liked, is_collected },
             status: row.status,
             report_count: 0,
-            created_at: row.created_at,
-            last_replied_at: row.last_replied_at,
+            created_at: row.created_at
+                .expect("created_at should not be null")
+                .and_local_timezone(Local)
+                .unwrap(),
+            last_replied_at: row.last_replied_at
+                .expect("last_replied_at should not be null") 
+                .and_local_timezone(Local)
+                .unwrap(),
         })
     }
 
@@ -421,7 +485,7 @@ impl ForumService {
             .fetch_one(&mut *tx).await?;
         
         tx.commit().await?;
-        Ok((new_count, is_liked))
+        Ok((new_count.unwrap_or(0), is_liked))
     }
 
     pub async fn toggle_collect_post(pool: &DBPool, post_id: &str, user_id: &str, action: &str) -> Result<(bool, i64), AppError> {
@@ -481,7 +545,13 @@ impl ForumService {
         // 3. 查出完整的 CommentVO
         let author = sqlx::query_as!(
             UserLite,
-            "SELECT id, student_id, name, avatar_url, college FROM users WHERE id = ?",
+            r#"
+            SELECT 
+                id, student_id, name, 
+                COALESCE(avatar_url, '') as avatar_url, 
+                COALESCE(college, '') as college 
+            FROM users WHERE id = ?
+            "#,
             user_id
         ).fetch_one(&mut *tx).await?;
 
@@ -490,7 +560,10 @@ impl ForumService {
             reply_to = sqlx::query_as!(
                 UserLite,
                 r#"
-                SELECT u.id, u.student_id, u.name, u.avatar_url, u.college 
+                SELECT 
+                    u.id, u.student_id, u.name, 
+                    COALESCE(u.avatar_url, '') as avatar_url, 
+                    COALESCE(u.college, '') as college 
                 FROM comments c 
                 JOIN users u ON c.author_id = u.id 
                 WHERE c.id = ?
@@ -515,7 +588,7 @@ impl ForumService {
     }
 
     // -------------------------------------------------------------------------
-    // Comments - List (不分页版本)
+    // Comments - List
     // -------------------------------------------------------------------------
     pub async fn get_comments(
         pool: &DBPool, 
@@ -721,7 +794,12 @@ impl ForumService {
                 (content, name)
             };
 
-            let short_snippet = if snippet.len() > 50 { format!("{}...", &snippet[0..50]) } else { snippet };
+            let short_snippet = if snippet.chars().count() > 20 { 
+                let truncated: String = snippet.chars().take(20).collect();
+                format!("{}...", truncated)
+            } else {
+                snippet
+            };
 
             list.push(serde_json::json!({
                 "id": row.get::<String, _>("id"),

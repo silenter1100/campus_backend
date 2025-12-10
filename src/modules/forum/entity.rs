@@ -100,14 +100,21 @@ pub struct AdminPostStatusRequest {
 // =========================================================================
 //  Inner Structures
 // =========================================================================
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct MediaMeta {
+    pub size: Option<String>,
+    pub width: Option<String>,
+    pub height: Option<String>,
+    pub filename: Option<String>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct MediaItem {
     #[serde(rename = "type")]
-    pub media_type: String, // "image", "video"
+    pub media_type: String,
     pub url: String,
     pub thumbnail_url: Option<String>,
-    pub meta: serde_json::Value, // JSON field for width, height, etc.
+    pub meta: MediaMeta, 
 }
 
 #[derive(Debug, Serialize, FromRow)]
@@ -162,10 +169,8 @@ pub struct PostLiteVO {
     pub cover_image_url: Option<String>,
     pub board_id: String,
     pub board_name: String,
-    #[sqlx(flatten)]
-    pub author: UserLite, // Flatten handles nested user fields if querying via join
+    pub author: UserLite, 
     pub created_at: DateTime<Local>,
-    // Below fields usually need manual assembly or complex query mapping
     pub stats: PostStats,
     pub user_interaction: UserInteraction,
     pub tags: Vec<String>,
@@ -217,7 +222,6 @@ pub struct Pagination<T> {
 pub struct PageInfo {
     pub total: i64,
     pub page: i64,
-    #[serde(rename = "pageSize")]
-    pub page_size: i64,
+    pub page_size: i64, 
     pub pages: i64,
 }
