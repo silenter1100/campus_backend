@@ -1,4 +1,4 @@
+pub mod activity;
+pub mod bbs;
+pub mod course;
 pub mod user;
-mod course;
-mod bbs;
-mod activity;

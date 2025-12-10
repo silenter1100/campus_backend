@@ -1,2 +1,4 @@
-mod db;
-mod error;
+pub mod db;
+pub mod error;
+
+pub use error::AppError;
