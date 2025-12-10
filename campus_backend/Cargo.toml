@@ -3,36 +3,93 @@ name = "campus_backend"
 version = "0.1.0"
 edition = "2021"
 
-# 请确保 dependencies 只有这一个区域，不要重复
+[lib]
+name = "campus_backend"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]  # cdylib 用于 iOS/Android FFI，rlib 用于 Rust 内部
+
 [dependencies]
-# Web 框架
+# 1. Web 框架 (Axum) - 类似于 Spring Boot Web
 axum = "0.7"
+
+# 2. 异步运行时 (Tokio) - Rust 的核心引擎
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
-# 必须开启 cors feature
-tower-http = { version = "0.5", features = ["cors", "trace"] }
 
-# 序列化
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# 3. 序列化库 (Serde) - 类似于 Jackson/Gson
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
-# 数据库
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql", "chrono"] }
+# 4. 数据库连接 (SQLx) - 类似于 MyBatis 的查询构建器
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "mysql", "macros", "chrono", "uuid"] }
 
-# JWT 相关
-jsonwebtoken = "9"
-chrono = "0.4"
+# 5. 环境变量 (Dotenv) - 用于读取 .env 文件里的数据库密码
+dotenv = "0.15"
 
-# 环境变量
-dotenvy = "0.15"
-
-# 错误处理
-thiserror = "1.0"
-
-#关键：必须开启 env-filter 才能在 main.rs 里用 EnvFilter
+# 6. 日志追踪 (Tracing) - 类似于 Log4j/Slf4j
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
-# 其他
+# 7. 中间件支持 (Tower) - CORS、日志等
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# 8. 时间处理 (Chrono) - 类似于 Java 的 LocalDateTime
+chrono = { version = "0.4", features = ["serde"] }
+
+# 9. UUID 生成 - 用于生成唯一 ID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# 10. 密码加密 (Bcrypt) - 用于用户密码哈希
+bcrypt = "0.15"
+
+# 11. JWT 认证 (可选，如果需要 token 认证)
+jsonwebtoken = "9"
 axum-extra = { version = "0.9", features = ["typed-header"] }
+
+# 12. Redis 客户端 - 用于缓存、会话管理、分布式锁
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# 13. UniFFI - 用于生成跨语言 FFI 绑定（Kotlin/Swift/Python）
+uniffi = { version = "0.28", features = ["cli"] }
+
+# 14. Protocol Buffers (Protobuf) - 二进制序列化，用于客户端通信
 prost = "0.12"
+prost-types = "0.12"
+
+# 15. Bincode - Rust 专用二进制序列化，用于 Redis 缓存
+bincode = "1.3"
+
+# 16. Async trait - 用于异步 trait
+async-trait = "0.1"
+
+# 17. 文件类型检测 - 通过文件头魔数检测文件类型
+infer = "0.15"
+
+# 18. 阿里云OSS SDK - 对象存储服务
+aliyun-oss-client = "0.8"
+reqwest = { version = "0.11", features = ["json", "multipart"] }
+
+# 19. 图片处理 - 生成缩略图
+image = "0.24"
+
+
+
+
+[dev-dependencies]
+# 测试框架
+tokio-test = "0.4"  # Tokio 测试工具
+rstest = "0.18"  # 参数化测试
+mockall = "0.12"  # Mock 框架
+wiremock = "0.6"  # HTTP Mock
+fake = { version = "2.9", features = ["derive", "chrono"] }  # 假数据生成
+serial_test = "3.0"  # 串行测试（避免数据库冲突）
+
+# HTTP 测试客户端
+axum-test = "14.0"  # Axum 集成测试
+tower = { version = "0.4", features = ["util"] }
+hyper = { version = "1.0", features = ["full"] }
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+prost-build = "0.12"
+protoc-bin-vendored = "3.2.0"  # 用于编译 .proto 文件
