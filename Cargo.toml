@@ -44,6 +44,7 @@ bcrypt = "0.15"
 
 # 11. JWT 认证 (可选，如果需要 token 认证)
 jsonwebtoken = "9"
+axum-extra = { version = "0.9", features = ["typed-header"] }
 
 # 12. Redis 客户端 - 用于缓存、会话管理、分布式锁
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
@@ -60,6 +61,16 @@ bincode = "1.3"
 
 # 16. Async trait - 用于异步 trait
 async-trait = "0.1"
+
+# 17. 文件类型检测 - 通过文件头魔数检测文件类型
+infer = "0.15"
+
+# 18. 阿里云OSS SDK - 对象存储服务
+aliyun-oss-client = "0.8"
+reqwest = { version = "0.11", features = ["json", "multipart"] }
+
+# 19. 图片处理 - 生成缩略图
+image = "0.24"
 
 [dev-dependencies]
 # 测试框架

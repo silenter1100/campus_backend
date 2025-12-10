@@ -10,7 +10,7 @@ use prost::Message;
 use serde::Deserialize;
 use sqlx::MySqlPool;
 
-use crate::common::AppError;
+use crate::common::{auth::AuthUser, AppError};
 use super::{entity, service};
 
 // 引入生成的 Protobuf 代码
@@ -22,8 +22,10 @@ mod proto {
 
 pub fn routes() -> Router<MySqlPool> {
     Router::new()
+        // 公开路由（不需要认证）
         .route("/api/v1/semesters", get(get_semesters_handler))
         .route("/api/v1/courses", get(get_public_courses_handler))
+        // 需要认证的路由
         .route("/api/v1/schedule", get(get_schedule_handler))
         .route("/api/v1/schedule", post(add_schedule_items_handler))
         .route("/api/v1/schedule", patch(update_schedule_item_handler))
@@ -147,8 +149,9 @@ async fn get_public_courses_handler(
 async fn get_schedule_handler(
     State(pool): State<MySqlPool>,
     Query(query): Query<GetScheduleQuery>,
+    auth_user: AuthUser, // 从 JWT 获取用户信息
 ) -> Result<impl IntoResponse, AppError> {
-    let user_id = 1; // TODO: 从 JWT 获取
+    let user_id = auth_user.user_id;
 
     let items = service::get_user_schedule(&pool, user_id, query.semester_id, query.week).await?;
 
@@ -189,6 +192,7 @@ async fn get_schedule_handler(
 /// 批量添加课表项
 async fn add_schedule_items_handler(
     State(pool): State<MySqlPool>,
+    auth_user: AuthUser, // 从 JWT 获取用户信息
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     let proto_req = proto::AddScheduleItemsRequest::decode(body)?;
@@ -213,7 +217,7 @@ async fn add_schedule_items_handler(
         })
         .collect();
 
-    let user_id = 1; // TODO: 从 JWT 获取
+    let user_id = auth_user.user_id;
     let result = service::add_schedule_items(&pool, user_id, proto_req.semester_id, items).await?;
 
     let successful_items: Vec<proto::ScheduleItem> = result
@@ -277,6 +281,7 @@ async fn add_schedule_items_handler(
 async fn update_schedule_item_handler(
     State(pool): State<MySqlPool>,
     Query(query): Query<ItemIdQuery>,
+    auth_user: AuthUser, // 从 JWT 获取用户信息
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     let proto_req = proto::UpdateScheduleItemRequest::decode(body)?;
@@ -299,7 +304,7 @@ async fn update_schedule_item_handler(
         color_hex: proto_req.color_hex,
     };
 
-    let user_id = 1; // TODO: 从 JWT 获取
+    let user_id = auth_user.user_id;
     let item = service::update_schedule_item(&pool, user_id, query.item_id, input).await?;
 
     let proto_item = proto::ScheduleItem {
@@ -339,8 +344,9 @@ async fn update_schedule_item_handler(
 async fn delete_schedule_item_handler(
     State(pool): State<MySqlPool>,
     Query(query): Query<ItemIdQuery>,
+    auth_user: AuthUser, // 从 JWT 获取用户信息
 ) -> Result<impl IntoResponse, AppError> {
-    let user_id = 1; // TODO: 从 JWT 获取
+    let user_id = auth_user.user_id;
 
     service::delete_schedule_item(&pool, user_id, query.item_id).await?;
 
