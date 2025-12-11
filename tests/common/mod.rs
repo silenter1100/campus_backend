@@ -1,7 +1,17 @@
 use sqlx::{MySql, Pool};
 use std::sync::Once;
+use jsonwebtoken::{encode, EncodingKey, Header};
+use serde::{Deserialize, Serialize};
 
 static INIT: Once = Once::new();
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    pub user_id: String,
+    pub role: String,
+    pub exp: usize,
+    pub iat: usize,
+}
 
 /// 初始化测试环境（只执行一次）
 pub fn init_test_env() {
@@ -30,6 +40,25 @@ pub async fn create_test_pool() -> Pool<MySql> {
         .connect(&database_url)
         .await
         .expect("Failed to create test database pool")
+}
+
+/// 生成测试 JWT Token
+pub fn generate_test_token(user_id: &str) -> String {
+    let now = chrono::Utc::now().timestamp() as usize;
+    let claims = Claims {
+        user_id: user_id.to_string(),
+        role: "student".to_string(),
+        exp: now + 86400, // 24小时后过期
+        iat: now,
+    };
+    
+    let secret = "test-secret-key";
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .expect("Failed to generate test token")
 }
 
 /// 清理测试数据

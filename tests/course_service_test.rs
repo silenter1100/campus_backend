@@ -224,7 +224,7 @@ async fn test_get_user_schedule() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     let item_id = common::create_test_schedule_item(&pool, user_id, semester_id).await;
     
     // 执行测试
@@ -249,7 +249,7 @@ async fn test_add_schedule_items() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     // 创建一门全校课程用于非自定义课表项的 source_id
     let course_id = common::create_test_course(&pool, semester_id).await;
     
@@ -310,7 +310,7 @@ async fn test_update_schedule_item() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     let item_id = common::create_test_schedule_item(&pool, user_id, semester_id).await;
     
     // 准备更新数据
@@ -352,7 +352,7 @@ async fn test_delete_schedule_item() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     let item_id = common::create_test_schedule_item(&pool, user_id, semester_id).await;
     
     // 执行删除
@@ -380,7 +380,7 @@ async fn test_delete_schedule_item() {
 async fn test_delete_nonexistent_schedule_item() {
     let pool = common::create_test_pool().await;
     
-    let user_id = 1;
+    let user_id = "test-user-1";
     let nonexistent_id = 99999;
     
     // 执行删除

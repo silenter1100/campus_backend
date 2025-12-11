@@ -118,7 +118,7 @@ async fn get_public_courses_handler(
             end_section: c.end_section,
             weeks_range: c.weeks_range,
             r#type: c.r#type,
-            credits: c.credits,
+            credits: c.credits.unwrap_or(0),
             description: c.description,
         })
         .collect();

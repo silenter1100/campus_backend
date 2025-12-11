@@ -6,9 +6,11 @@ use axum::{
     Router,
 };
 use campus_backend::modules::course;
+use campus_backend::common::state::{AppState, JwtConfig};
 use prost::Message;
 use serial_test::serial;
 use tower::ServiceExt;
+use std::sync::Arc;
 
 // 引入生成的 Protobuf 代码
 mod proto {
@@ -17,7 +19,18 @@ mod proto {
 
 /// 创建测试应用
 async fn create_test_app(pool: sqlx::MySqlPool) -> Router {
-    course::routes().with_state(pool)
+    let jwt_config = Arc::new(JwtConfig {
+        secret: "test-secret-key".to_string(),
+        expiration: 86400,
+    });
+    
+    let app_state = AppState {
+        jwt_config,
+        pool,
+        upload_service: None,
+    };
+    
+    course::routes().with_state(app_state)
 }
 
 /// 测试获取学期列表 API
@@ -119,16 +132,20 @@ async fn test_api_get_schedule() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     common::create_test_schedule_item(&pool, user_id, semester_id).await;
     
     // 创建测试应用
     let app = create_test_app(pool.clone()).await;
     
+    // 生成测试 token
+    let token = common::generate_test_token(user_id);
+    
     // 发送请求
     let request = Request::builder()
         .uri(format!("/api/v1/schedule?semester_id={}", semester_id))
         .header("Accept", "application/x-protobuf")
+        .header("Authorization", format!("Bearer {}", token))
         .body(Body::empty())
         .unwrap();
     
@@ -190,11 +207,15 @@ async fn test_api_add_schedule_items() {
     
     let request_bytes = proto_request.encode_to_vec();
     
+    // 生成测试 token
+    let token = common::generate_test_token("test-user-1");
+    
     // 发送请求
     let request = Request::builder()
         .method("POST")
         .uri("/api/v1/schedule")
         .header("Content-Type", "application/x-protobuf")
+        .header("Authorization", format!("Bearer {}", token))
         .body(Body::from(request_bytes))
         .unwrap();
     
@@ -229,7 +250,7 @@ async fn test_api_update_schedule_item() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     let item_id = common::create_test_schedule_item(&pool, user_id, semester_id).await;
     
     // 创建测试应用
@@ -253,11 +274,15 @@ async fn test_api_update_schedule_item() {
     
     let request_bytes = proto_request.encode_to_vec();
     
+    // 生成测试 token
+    let token = common::generate_test_token(user_id);
+    
     // 发送请求
     let request = Request::builder()
         .method("PATCH")
         .uri(format!("/api/v1/schedule?item_id={}", item_id))
         .header("Content-Type", "application/x-protobuf")
+        .header("Authorization", format!("Bearer {}", token))
         .body(Body::from(request_bytes))
         .unwrap();
     
@@ -291,16 +316,20 @@ async fn test_api_delete_schedule_item() {
     
     // 创建测试数据
     let semester_id = common::create_test_semester(&pool).await;
-    let user_id = 1;
+    let user_id = "test-user-1";
     let item_id = common::create_test_schedule_item(&pool, user_id, semester_id).await;
     
     // 创建测试应用
     let app = create_test_app(pool.clone()).await;
     
+    // 生成测试 token
+    let token = common::generate_test_token(user_id);
+    
     // 发送请求
     let request = Request::builder()
         .method("DELETE")
         .uri(format!("/api/v1/schedule?item_id={}", item_id))
+        .header("Authorization", format!("Bearer {}", token))
         .body(Body::empty())
         .unwrap();
     
