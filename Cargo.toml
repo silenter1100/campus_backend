@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]  # cdylib 用于 iOS/Android FFI，rlib 用于 R
 
 [dependencies]
 # 1. Web 框架 (Axum) - 类似于 Spring Boot Web
-axum = "0.7"
+axum = { version = "0.7", features = ["multipart"] }
 
 # 2. 异步运行时 (Tokio) - Rust 的核心引擎
 tokio = { version = "1", features = ["full"] }

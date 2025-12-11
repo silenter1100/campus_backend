@@ -26,6 +26,9 @@ pub enum AppError {
     /// 未授权
     #[allow(dead_code)]
     Unauthorized(String),
+    /// 禁止访问
+    #[allow(dead_code)]
+    Forbidden(String),
     /// 内部服务器错误
     #[allow(dead_code)]
     InternalError(String),
@@ -42,6 +45,7 @@ impl fmt::Display for AppError {
             AppError::NotFound(msg) => write!(f, "Not found: {}", msg),
             AppError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
             AppError::Unauthorized(msg) => write!(f, "Unauthorized: {}", msg),
+            AppError::Forbidden(msg) => write!(f, "Forbidden: {}", msg),
             AppError::InternalError(msg) => write!(f, "Internal error: {}", msg),
             AppError::AuthError(msg) => write!(f, "Auth error: {}", msg),
             AppError::ProtobufError(e) => write!(f, "Protobuf error: {}", e),
@@ -76,6 +80,7 @@ impl IntoResponse for AppError {
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, 404, msg),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, 400, msg),
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, 401, msg),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, 403, msg),
             AppError::InternalError(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, 500, msg)

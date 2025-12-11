@@ -38,9 +38,32 @@ async fn main() {
 
     // 初始化 JWT 配置
     let jwt_config = JwtConfig::from_env();
+    
+    // 初始化上传服务
+    let upload_service = match modules::upload::OssConfig::from_env() {
+        Ok(oss_config) => {
+            match modules::upload::UploadService::new(oss_config, pool.clone()) {
+                Ok(service) => {
+                    tracing::info!("Upload service initialized successfully");
+                    Some(Arc::new(service))
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to initialize upload service: {:?}", e);
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("OSS config not found: {:?}. Upload functionality will be disabled.", e);
+            None
+        }
+    };
+
+    // 创建应用状态
     let state = AppState {
-        pool,
+        pool: pool.clone(),
         jwt_config: Arc::new(jwt_config),
+        upload_service: upload_service.clone(),
     };
 
     // 配置 CORS
@@ -50,11 +73,20 @@ async fn main() {
         .allow_headers(Any);
 
     // 构建应用路由
-    let app = Router::new()
+    let mut app = Router::new()
         // 课程模块
         .merge(modules::course::routes())
         // 用户模块
-        .merge(modules::user::routes())
+        .merge(modules::user::routes());
+
+    // 如果上传服务初始化成功，添加上传路由
+    if upload_service.is_some() {
+        app = app.merge(modules::upload::create_routes());
+        tracing::info!("Upload routes registered");
+    }
+
+    // 应用 CORS 和状态
+    let app = app
         .layer(cors)
         .with_state(state);
 

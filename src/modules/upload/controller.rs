@@ -1,8 +1,7 @@
-use crate::common::AppError;
-use crate::modules::upload::{UploadRequest, UploadResult, UploadService};
+use crate::common::{AppError, auth::AuthUser};
+use crate::modules::upload::{UploadRequest, UploadService};
 use axum::{
-    extract::{Multipart, State},
-    http::StatusCode,
+    extract::{Multipart, Path, State},
     response::Json,
 };
 use serde_json::{json, Value};
@@ -13,9 +12,10 @@ use tracing::{error, info, warn};
 pub struct UploadController;
 
 impl UploadController {
-    /// POST /api/v1/storage/upload - 上传文件
+    /// POST /api/v1/storage/upload - 上传文件（需要认证）
     pub async fn upload_file(
         State(upload_service): State<Arc<UploadService>>,
+        auth_user: AuthUser,
         mut multipart: Multipart,
     ) -> Result<Json<Value>, AppError> {
         let mut file_data: Option<Vec<u8>> = None;
@@ -78,9 +78,10 @@ impl UploadController {
         }
 
         info!(
-            "Received upload request: {} ({} bytes)",
+            "Received upload request: {} ({} bytes) from user: {}",
             original_filename,
-            file_data.len()
+            file_data.len(),
+            auth_user.user_id
         );
 
         // 创建上传请求
@@ -91,68 +92,74 @@ impl UploadController {
         };
 
         // 执行上传
-        let result = upload_service.upload_file(upload_request).await?;
+        let result = upload_service.upload_file(upload_request, &auth_user.user_id).await?;
 
         // 返回成功响应
         Ok(Json(json!({
             "code": 200,
             "message": "上传成功",
             "data": {
+                "id": result.id,
                 "url": result.url,
                 "thumbnail_url": result.thumbnail_url,
-                "filename": result.filename,
                 "size": result.size
             }
         })))
     }
-    /// GET /api/v1/storage/info/{filename} - 获取文件信息
+
+    /// GET /api/v1/storage/files/{file_id} - 获取文件信息
     pub async fn get_file_info(
         State(upload_service): State<Arc<UploadService>>,
-        axum::extract::Path(filename): axum::extract::Path<String>,
+        Path(file_id): Path<String>,
     ) -> Result<Json<Value>, AppError> {
-        info!("Getting file info for: {}", filename);
+        info!("Getting file info for: {}", file_id);
 
-        // 这里简化处理，实际应该从数据库查询完整路径
-        // 假设文件名格式为: timestamp_uuid.extension
-        let object_key = format!("images/2024/12/11/{}", filename); // 简化示例
-
-        match upload_service.get_file_info(&object_key).await? {
-            Some(size) => Ok(Json(json!({
+        match upload_service.get_file_by_id(&file_id).await? {
+            Some(file) => Ok(Json(json!({
                 "code": 200,
                 "message": "文件存在",
                 "data": {
-                    "filename": filename,
-                    "size": size,
-                    "exists": true
+                    "id": file.id,
+                    "url": file.file_url,
+                    "size": file.file_size,
+                    "created_at": file.created_at,
+                    "is_used": file.is_used
                 }
             }))),
-            None => Ok(Json(json!({
-                "code": 404,
-                "message": "文件不存在",
-                "data": {
-                    "filename": filename,
-                    "exists": false
-                }
-            }))),
+            None => Err(AppError::NotFound("文件不存在".to_string())),
         }
     }
 
-    /// DELETE /api/v1/storage/{filename} - 删除文件 (管理员功能)
+    /// DELETE /api/v1/storage/files/{file_id} - 删除文件（需要认证，只能删除自己的文件）
     pub async fn delete_file(
         State(upload_service): State<Arc<UploadService>>,
-        axum::extract::Path(filename): axum::extract::Path<String>,
+        auth_user: AuthUser,
+        Path(file_id): Path<String>,
     ) -> Result<Json<Value>, AppError> {
-        info!("Deleting file: {}", filename);
+        info!("Deleting file: {} by user: {}", file_id, auth_user.user_id);
 
-        // 这里简化处理，实际应该从数据库查询完整路径
-        let object_key = format!("images/2024/12/11/{}", filename); // 简化示例
-
-        upload_service.delete_file(&object_key).await?;
+        upload_service.delete_file(&file_id, &auth_user.user_id).await?;
 
         Ok(Json(json!({
             "code": 200,
             "message": "文件删除成功",
             "data": null
+        })))
+    }
+
+    /// GET /api/v1/storage/files - 获取当前用户的文件列表
+    pub async fn list_my_files(
+        State(upload_service): State<Arc<UploadService>>,
+        auth_user: AuthUser,
+    ) -> Result<Json<Value>, AppError> {
+        info!("Listing files for user: {}", auth_user.user_id);
+
+        let files = upload_service.list_user_files(&auth_user.user_id).await?;
+
+        Ok(Json(json!({
+            "code": 200,
+            "message": "查询成功",
+            "data": files
         })))
     }
 }

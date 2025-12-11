@@ -1,16 +1,30 @@
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use chrono::{DateTime, Utc};
 
 /// 文件上传结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UploadResult {
+    /// 文件ID
+    pub id: String,
     /// 文件在OSS中的永久访问链接
     pub url: String,
     /// 如果是图片，返回缩略图URL (可选)
     pub thumbnail_url: Option<String>,
-    /// 服务器保存的文件名
-    pub filename: String,
     /// 文件大小，单位：字节
     pub size: i64,
+}
+
+/// 数据库中的文件记录（简化版）
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UploadFile {
+    pub id: String,
+    pub user_id: String,
+    pub file_path: String,
+    pub file_url: String,
+    pub file_size: i64,
+    pub is_used: bool,
+    pub created_at: DateTime<Utc>,
 }
 
 /// 文件上传请求
