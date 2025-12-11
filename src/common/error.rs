@@ -29,6 +29,8 @@ pub enum AppError {
     /// 内部服务器错误
     #[allow(dead_code)]
     InternalError(String),
+    /// 认证错误
+    AuthError(String),
     /// Protobuf 解析错误
     ProtobufError(prost::DecodeError),
 }
@@ -41,6 +43,7 @@ impl fmt::Display for AppError {
             AppError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
             AppError::Unauthorized(msg) => write!(f, "Unauthorized: {}", msg),
             AppError::InternalError(msg) => write!(f, "Internal error: {}", msg),
+            AppError::AuthError(msg) => write!(f, "Auth error: {}", msg),
             AppError::ProtobufError(e) => write!(f, "Protobuf error: {}", e),
         }
     }
@@ -77,6 +80,7 @@ impl IntoResponse for AppError {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, 500, msg)
             }
+            AppError::AuthError(msg) => (StatusCode::UNAUTHORIZED, 401, msg),
             AppError::ProtobufError(e) => {
                 tracing::error!("Protobuf error: {:?}", e);
                 (StatusCode::BAD_REQUEST, 400, format!("Protobuf 解析错误: {}", e))

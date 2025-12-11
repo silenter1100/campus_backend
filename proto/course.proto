@@ -18,7 +18,7 @@ message PublicCourse {
   int64 id = 1;
   string course_name = 2;
   string teacher_name = 3;
-  optional int64 teacher_id = 4;
+  optional string teacher_id = 4;
   string location = 5;
   int32 day_of_week = 6;  // 1-7 (1代表周一)
   int32 start_section = 7;

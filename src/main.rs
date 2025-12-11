@@ -4,8 +4,10 @@ mod modules;
 
 use axum::Router;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use crate::common::state::{AppState, JwtConfig};
 
 #[tokio::main]
 async fn main() {
@@ -34,12 +36,12 @@ async fn main() {
 
     tracing::info!("Database connection pool created");
 
-    // 开发模式：打印测试用的 JWT tokens
-    if std::env::var("DEV_MODE").unwrap_or_else(|_| "false".to_string()) == "true" {
-        if let Err(e) = common::dev_tools::print_test_tokens() {
-            tracing::warn!("Failed to generate test tokens: {}", e);
-        }
-    }
+    // 初始化 JWT 配置
+    let jwt_config = JwtConfig::from_env();
+    let state = AppState {
+        pool,
+        jwt_config: Arc::new(jwt_config),
+    };
 
     // 配置 CORS
     let cors = CorsLayer::new()
@@ -49,9 +51,12 @@ async fn main() {
 
     // 构建应用路由
     let app = Router::new()
+        // 课程模块
         .merge(modules::course::routes())
+        // 用户模块
+        .merge(modules::user::router())
         .layer(cors)
-        .with_state(pool);
+        .with_state(state);
 
     // 启动服务器
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

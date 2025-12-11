@@ -141,7 +141,7 @@ pub async fn get_public_courses(
 /// 获取用户课表
 pub async fn get_user_schedule(
     pool: &MySqlPool,
-    user_id: i64,
+    user_id: &str,
     semester_id: i64,
     week: Option<i32>,
 ) -> Result<Vec<ScheduleItem>, AppError> {
@@ -209,7 +209,7 @@ pub async fn get_user_schedule(
 /// 检查时间冲突
 async fn check_time_conflict(
     pool: &MySqlPool,
-    user_id: i64,
+    user_id: &str,
     semester_id: i64,
     day_of_week: i32,
     start_section: i32,
@@ -288,7 +288,7 @@ async fn check_time_conflict(
 /// 批量添加课表项
 pub async fn add_schedule_items(
     pool: &MySqlPool,
-    user_id: i64,
+    user_id: &str,
     semester_id: i64,
     items: Vec<ScheduleItemInput>,
 ) -> Result<BatchAddResult, AppError> {
@@ -425,7 +425,7 @@ pub async fn add_schedule_items(
 /// 更新课表项
 pub async fn update_schedule_item(
     pool: &MySqlPool,
-    user_id: i64,
+    user_id: &str,
     item_id: i64,
     input: UpdateScheduleItemInput,
 ) -> Result<ScheduleItem, AppError> {
@@ -542,7 +542,7 @@ pub async fn update_schedule_item(
 /// 删除课表项
 pub async fn delete_schedule_item(
     pool: &MySqlPool,
-    user_id: i64,
+    user_id: &str,
     item_id: i64,
 ) -> Result<(), AppError> {
     let result = sqlx::query(

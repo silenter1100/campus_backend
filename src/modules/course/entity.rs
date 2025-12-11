@@ -21,7 +21,7 @@ pub struct PublicCourseDb {
     pub semester_id: i64,
     pub course_name: String,
     pub teacher_name: String,
-    pub teacher_id: Option<i64>,
+    pub teacher_id: Option<String>,
     pub location: String,
     pub day_of_week: i32,
     pub start_section: i32,
@@ -36,7 +36,7 @@ pub struct PublicCourseDb {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct ScheduleItemDb {
     pub id: i64,
-    pub user_id: i64,
+    pub user_id: String,
     pub semester_id: i64,
     pub source_id: Option<i64>,
     pub course_name: String,
@@ -85,7 +85,7 @@ pub struct PublicCourse {
     pub id: i64,
     pub course_name: String,
     pub teacher_name: String,
-    pub teacher_id: Option<i64>,
+    pub teacher_id: Option<String>,
     pub location: String,
     pub day_of_week: i32,
     pub start_section: i32,

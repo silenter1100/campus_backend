@@ -90,3 +90,4 @@ hyper = { version = "1.0", features = ["full"] }
 [build-dependencies]
 uniffi = { version = "0.28", features = ["build"] }
 prost-build = "0.12"  # 用于编译 .proto 文件
+protoc-bin-vendored = "3.0"  # 内置 protoc 编译器，用于部署环境

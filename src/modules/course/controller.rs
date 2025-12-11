@@ -8,10 +8,10 @@ use axum::{
 };
 use prost::Message;
 use serde::Deserialize;
-use sqlx::MySqlPool;
-
-use crate::common::{auth::AuthUser, AppError};
+use crate::common::{auth::AuthUser, AppError, state::AppState};
 use super::{entity, service};
+
+
 
 // 引入生成的 Protobuf 代码
 mod proto {
@@ -20,7 +20,7 @@ mod proto {
 
 // ==================== 路由注册 ====================
 
-pub fn routes() -> Router<MySqlPool> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         // 公开路由（不需要认证）
         .route("/api/v1/semesters", get(get_semesters_handler))
@@ -59,9 +59,9 @@ struct ItemIdQuery {
 
 /// 获取学期列表
 async fn get_semesters_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    let semesters = service::get_semesters(&pool).await?;
+    let semesters = service::get_semesters(&state.pool).await?;
 
     let proto_semesters: Vec<proto::Semester> = semesters
         .into_iter()
@@ -92,7 +92,7 @@ async fn get_semesters_handler(
 
 /// 获取全校课程列表
 async fn get_public_courses_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<GetCoursesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     let params = entity::GetCoursesParams {
@@ -103,7 +103,7 @@ async fn get_public_courses_handler(
         page_size: query.page_size.unwrap_or(20),
     };
 
-    let (courses, pagination) = service::get_public_courses(&pool, params).await?;
+    let (courses, pagination) = service::get_public_courses(&state.pool, params).await?;
 
     let proto_courses: Vec<proto::PublicCourse> = courses
         .into_iter()
@@ -147,13 +147,13 @@ async fn get_public_courses_handler(
 
 /// 获取用户课表
 async fn get_schedule_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<GetScheduleQuery>,
     auth_user: AuthUser, // 从 JWT 获取用户信息
 ) -> Result<impl IntoResponse, AppError> {
-    let user_id = auth_user.user_id;
+    let user_id = &auth_user.user_id;
 
-    let items = service::get_user_schedule(&pool, user_id, query.semester_id, query.week).await?;
+    let items = service::get_user_schedule(&state.pool, user_id, query.semester_id, query.week).await?;
 
     let proto_items: Vec<proto::ScheduleItem> = items
         .into_iter()
@@ -191,7 +191,7 @@ async fn get_schedule_handler(
 
 /// 批量添加课表项
 async fn add_schedule_items_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     auth_user: AuthUser, // 从 JWT 获取用户信息
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
@@ -217,8 +217,8 @@ async fn add_schedule_items_handler(
         })
         .collect();
 
-    let user_id = auth_user.user_id;
-    let result = service::add_schedule_items(&pool, user_id, proto_req.semester_id, items).await?;
+    let user_id = &auth_user.user_id;
+    let result = service::add_schedule_items(&state.pool, user_id, proto_req.semester_id, items).await?;
 
     let successful_items: Vec<proto::ScheduleItem> = result
         .successful_items
@@ -279,7 +279,7 @@ async fn add_schedule_items_handler(
 
 /// 更新课表项
 async fn update_schedule_item_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<ItemIdQuery>,
     auth_user: AuthUser, // 从 JWT 获取用户信息
     body: Bytes,
@@ -304,8 +304,8 @@ async fn update_schedule_item_handler(
         color_hex: proto_req.color_hex,
     };
 
-    let user_id = auth_user.user_id;
-    let item = service::update_schedule_item(&pool, user_id, query.item_id, input).await?;
+    let user_id = &auth_user.user_id;
+    let item = service::update_schedule_item(&state.pool, user_id, query.item_id, input).await?;
 
     let proto_item = proto::ScheduleItem {
         id: item.id,
@@ -342,13 +342,13 @@ async fn update_schedule_item_handler(
 
 /// 删除课表项
 async fn delete_schedule_item_handler(
-    State(pool): State<MySqlPool>,
+    State(state): State<AppState>,
     Query(query): Query<ItemIdQuery>,
     auth_user: AuthUser, // 从 JWT 获取用户信息
 ) -> Result<impl IntoResponse, AppError> {
-    let user_id = auth_user.user_id;
+    let user_id = &auth_user.user_id;
 
-    service::delete_schedule_item(&pool, user_id, query.item_id).await?;
+    service::delete_schedule_item(&state.pool, user_id, query.item_id).await?;
 
     let response = proto::DeleteScheduleItemResponse {
         code: 200,
