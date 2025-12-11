@@ -9,8 +9,9 @@ fn main() {
     std::env::set_var("PROTOC", protoc_path);
     
     let mut config = Config::new();
-    config.compile_protos(&["proto/course.proto"], &["proto/"])
+    config.compile_protos(&["proto/course.proto", "proto/user.proto"], &["proto/"])
         .expect("Failed to compile protobuf files");
     
     println!("cargo:rerun-if-changed=proto/course.proto");
+    println!("cargo:rerun-if-changed=proto/user.proto");
 }

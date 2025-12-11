@@ -54,7 +54,7 @@ async fn main() {
         // 课程模块
         .merge(modules::course::routes())
         // 用户模块
-        .merge(modules::user::router())
+        .merge(modules::user::routes())
         .layer(cors)
         .with_state(state);
 

@@ -1,207 +1,235 @@
 use axum::{
-    extract::{Json, State},
-    http::{StatusCode, HeaderMap},
+    body::Bytes,
+    extract::State,
+    http::{header, StatusCode},
     response::IntoResponse,
+    routing::{get, post, put},
+    Router,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-
-use crate::common::error::AppError;
-use crate::common::auth::get_user_id_from_token;
-use crate::common::state::AppState;
-
-use super::entity::UpdateUserProfile;
+use prost::Message;
+use crate::common::{auth::AuthUser, AppError, state::AppState};
 use super::service::UserService;
 
-#[derive(Debug, Deserialize)]
-pub struct LoginRequest {
-    pub student_id: String,
-    pub password: String,
+// 引入生成的 Protobuf 代码
+mod proto {
+    include!(concat!(env!("OUT_DIR"), "/campus.user.rs"));
 }
 
-#[derive(Debug, Deserialize)]
-pub struct RegisterRequest {
-    pub student_id: String,
-    pub password: String,
-    pub name: String,
-    pub college: String,
-    pub major: String,
-    pub phone: String,
+// ==================== 路由注册 ====================
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        // 公开路由（不需要认证）
+        .route("/api/v1/auth/login", post(login_handler))
+        .route("/api/v1/auth/register", post(register_handler))
+        // 需要认证的路由
+        .route("/api/v1/users/me", get(get_user_info_handler))
+        .route("/api/v1/users/me", put(update_profile_handler))
+        .route("/api/v1/auth/logout", post(logout_handler))
+        .route("/api/v1/auth/password", put(change_password_handler))
 }
 
-#[derive(Debug, Deserialize)]
-pub struct ChangePasswordRequest {
-    pub old_password: String,
-    pub new_password: String,
-}
+// ==================== 处理函数 ====================
 
-fn success_response<T: Serialize>(data: T) -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(json!({ "code": 200, "message": "success", "data": data })),
-    )
-}
-
-fn empty_success_response() -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(json!({ "code": 200, "message": "success", "data": null })),
-    )
-}
-
-/// 从 JWT 中解析 user_id
-fn get_current_user_id(headers: &HeaderMap, _state: &AppState) -> Result<String, AppError> {
-    let auth_header = headers
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| AppError::AuthError("缺少Authorization头".to_string()))?;
-
-    if !auth_header.starts_with("Bearer ") {
-        return Err(AppError::AuthError("Authorization头格式错误".into()));
-    }
-
-    let token = &auth_header[7..];
-    
-    // 使用新的 auth 模块验证 token
-    get_user_id_from_token(token)
-}
-
-/// 路由
-pub fn router() -> axum::Router<AppState> {
-    axum::Router::new()
-        .route("/api/v1/auth/login", axum::routing::post(login_handler))
-        .route("/api/v1/auth/register", axum::routing::post(register_handler))
-        .route("/api/v1/users/me", axum::routing::get(get_user_info_handler))
-        .route("/api/v1/users/me", axum::routing::put(update_profile_handler))
-        .route("/api/v1/auth/logout", axum::routing::post(logout_handler))
-        .route("/api/v1/auth/password", axum::routing::put(change_password_handler))
-}
-
-/// 登录
-pub async fn login_handler(
+/// 用户登录
+async fn login_handler(
     State(state): State<AppState>,
-    Json(req): Json<LoginRequest>,
+    body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
-    let pool = &state.pool;
+    let proto_req = proto::LoginRequest::decode(body)?;
 
-    let user = UserService::login(pool, &req.student_id, &req.password).await?;
+    let user = UserService::login(&state.pool, &proto_req.student_id, &proto_req.password).await?;
 
     let token = crate::common::auth::generate_token_for_user(&user.id)?;
 
-    let login_data = json!({
-        "token": token,
-        "user": {
-            "id": user.id,
-            "student_id": user.student_id,
-            "name": user.username,
-            "avatar_url": user.avatar_url.unwrap_or_default(),
-            "role": user.role.unwrap_or_default(),
-            "college": user.college,
-            "major": user.major,
-            "grade": user.grade.unwrap_or_default(),
-            "class_name": user.class_name.unwrap_or_default(),
-            "bio": user.bio.unwrap_or_default(),
-            "phone": user.phone,
-            "email": user.email.unwrap_or_default(),
-            "wechat_id": user.wechat_id.unwrap_or_default(),
-            "weekly_course_count": user.weekly_course_count.unwrap_or_default(),
-            "forum_activity_score": user.forum_activity_score.unwrap_or_default(),
-            "collection_count": user.collection_count.unwrap_or_default(),
-            "setting_privacy_course": user.setting_privacy_course.unwrap_or_default(),
-            "setting_notification_switch": user.setting_notification_switch.unwrap_or_default(),
-        }
-    });
+    let proto_user = proto::User {
+        id: user.id.clone(),
+        student_id: user.student_id.clone(),
+        name: user.username.clone(),
+        avatar_url: user.avatar_url.unwrap_or_default(),
+        role: user.role.unwrap_or_default(),
+        college: user.college.clone(),
+        major: user.major.clone(),
+        grade: user.grade.unwrap_or_default(),
+        class_name: user.class_name.unwrap_or_default(),
+        bio: user.bio.unwrap_or_default(),
+        phone: user.phone.clone(),
+        email: user.email.unwrap_or_default(),
+        wechat_id: user.wechat_id.unwrap_or_default(),
+        weekly_course_count: user.weekly_course_count.unwrap_or_default(),
+        forum_activity_score: user.forum_activity_score.unwrap_or_default(),
+        collection_count: user.collection_count.unwrap_or_default(),
+        setting_privacy_course: user.setting_privacy_course.unwrap_or_default(),
+        setting_notification_switch: user.setting_notification_switch.unwrap_or_default(),
+    };
 
-    Ok(success_response(login_data))
+    let response = proto::LoginResponse {
+        code: 200,
+        message: "登录成功".to_string(),
+        data: Some(proto::LoginData {
+            token,
+            user: Some(proto_user),
+        }),
+    };
+
+    let bytes = response.encode_to_vec();
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-protobuf")],
+        bytes,
+    ))
 }
 
-/// 注册
-pub async fn register_handler(
+/// 用户注册
+async fn register_handler(
     State(state): State<AppState>,
-    Json(req): Json<RegisterRequest>,
+    body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
+    let proto_req = proto::RegisterRequest::decode(body)?;
+
     let user = UserService::register(
         &state.pool,
-        req.student_id,
-        req.password,
-        req.name,
-        req.college,
-        req.major,
-        req.phone,
-    )
-        .await?;
+        proto_req.student_id,
+        proto_req.password,
+        proto_req.name,
+        proto_req.college,
+        proto_req.major,
+        proto_req.phone,
+    ).await?;
 
-    Ok(success_response(json!({ "user_id": user.id })))
+    let response = proto::RegisterResponse {
+        code: 200,
+        message: "注册成功".to_string(),
+        data: Some(proto::RegisterData {
+            user_id: user.id,
+        }),
+    };
+
+    let bytes = response.encode_to_vec();
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-protobuf")],
+        bytes,
+    ))
 }
 
-/// 获取个人信息
-pub async fn get_user_info_handler(
+/// 获取用户信息
+async fn get_user_info_handler(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    auth_user: AuthUser,
 ) -> Result<impl IntoResponse, AppError> {
-    let uid = get_current_user_id(&headers, &state)?;
+    let user = UserService::get_user_info(&state.pool, &auth_user.user_id).await?;
 
-    let user = UserService::get_user_info(&state.pool, &uid).await?;
+    let proto_user = proto::User {
+        id: user.id,
+        student_id: user.student_id,
+        name: user.username,
+        avatar_url: user.avatar_url.unwrap_or_default(),
+        role: user.role.unwrap_or_default(),
+        college: user.college,
+        major: user.major,
+        grade: user.grade.unwrap_or_default(),
+        class_name: user.class_name.unwrap_or_default(),
+        bio: user.bio.unwrap_or_default(),
+        phone: user.phone,
+        email: user.email.unwrap_or_default(),
+        wechat_id: user.wechat_id.unwrap_or_default(),
+        weekly_course_count: user.weekly_course_count.unwrap_or_default(),
+        forum_activity_score: user.forum_activity_score.unwrap_or_default(),
+        collection_count: user.collection_count.unwrap_or_default(),
+        setting_privacy_course: user.setting_privacy_course.unwrap_or_default(),
+        setting_notification_switch: user.setting_notification_switch.unwrap_or_default(),
+    };
 
-    let resp = json!({
-        "id": user.id,
-        "student_id": user.student_id,
-        "name": user.username,
-        "avatar_url": user.avatar_url.unwrap_or_default(),
-        "role": user.role.unwrap_or_default(),
-        "college": user.college,
-        "major": user.major,
-        "grade": user.grade.unwrap_or_default(),
-        "class_name": user.class_name.unwrap_or_default(),
-        "bio": user.bio.unwrap_or_default(),
-        "phone": user.phone,
-        "email": user.email.unwrap_or_default(),
-        "wechat_id": user.wechat_id.unwrap_or_default(),
-        "weekly_course_count": user.weekly_course_count.unwrap_or_default(),
-        "forum_activity_score": user.forum_activity_score.unwrap_or_default(),
-        "collection_count": user.collection_count.unwrap_or_default(),
-        "setting_privacy_course": user.setting_privacy_course.unwrap_or_default(),
-        "setting_notification_switch": user.setting_notification_switch.unwrap_or_default(),
-    });
+    let response = proto::GetUserInfoResponse {
+        code: 200,
+        message: "获取成功".to_string(),
+        data: Some(proto_user),
+    };
 
-    Ok(success_response(resp))
+    let bytes = response.encode_to_vec();
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-protobuf")],
+        bytes,
+    ))
 }
 
-/// 更新个人资料
-pub async fn update_profile_handler(
+/// 更新用户资料
+async fn update_profile_handler(
     State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(update_data): Json<UpdateUserProfile>,
+    auth_user: AuthUser,
+    body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
-    let uid = get_current_user_id(&headers, &state)?;
+    let proto_req = proto::UpdateProfileRequest::decode(body)?;
 
-    UserService::update_profile(&state.pool, &uid, update_data).await?;
+    // 转换为服务层的更新结构
+    let update_data = super::entity::UpdateUserProfile {
+        name: if proto_req.name.is_empty() { None } else { Some(proto_req.name) },
+        avatar_url: if proto_req.avatar_url.is_empty() { None } else { Some(proto_req.avatar_url) },
+        bio: if proto_req.bio.is_empty() { None } else { Some(proto_req.bio) },
+        phone: if proto_req.phone.is_empty() { None } else { Some(proto_req.phone) },
+        email: if proto_req.email.is_empty() { None } else { Some(proto_req.email) },
+        wechat_id: if proto_req.wechat_id.is_empty() { None } else { Some(proto_req.wechat_id) },
+        setting_theme: None, // proto中没有这个字段
+        setting_privacy_course: if proto_req.setting_privacy_course.is_empty() { None } else { Some(proto_req.setting_privacy_course) },
+        setting_notification_switch: Some(proto_req.setting_notification_switch),
+    };
 
-    Ok(empty_success_response())
+    UserService::update_profile(&state.pool, &auth_user.user_id, update_data).await?;
+
+    let response = proto::UpdateProfileResponse {
+        code: 200,
+        message: "更新成功".to_string(),
+    };
+
+    let bytes = response.encode_to_vec();
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-protobuf")],
+        bytes,
+    ))
 }
 
-/// 退出
-pub async fn logout_handler(
+/// 用户退出
+async fn logout_handler(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    auth_user: AuthUser,
 ) -> Result<impl IntoResponse, AppError> {
-    let uid = get_current_user_id(&headers, &state)?;
+    UserService::logout(&state.pool, &auth_user.user_id).await?;
 
-    UserService::logout(&state.pool, &uid).await?;
+    let response = proto::LogoutResponse {
+        code: 200,
+        message: "退出成功".to_string(),
+    };
 
-    Ok(empty_success_response())
+    let bytes = response.encode_to_vec();
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-protobuf")],
+        bytes,
+    ))
 }
 
 /// 修改密码
-pub async fn change_password_handler(
+async fn change_password_handler(
     State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(req): Json<ChangePasswordRequest>,
+    auth_user: AuthUser,
+    body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
-    let uid = get_current_user_id(&headers, &state)?;
+    let proto_req = proto::ChangePasswordRequest::decode(body)?;
 
-    UserService::change_password(&state.pool, &uid, &req.old_password, &req.new_password)
-        .await?;
+    UserService::change_password(&state.pool, &auth_user.user_id, &proto_req.old_password, &proto_req.new_password).await?;
 
-    Ok(empty_success_response())
+    let response = proto::ChangePasswordResponse {
+        code: 200,
+        message: "密码修改成功".to_string(),
+    };
+
+    let bytes = response.encode_to_vec();
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-protobuf")],
+        bytes,
+    ))
 }
