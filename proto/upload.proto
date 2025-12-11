@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package campus.storage;
+
+// ==================== 基础数据模型 ====================
+
+// 文件上传结果
+message UploadResult {
+  string url = 1;                    // 文件在对象存储中的永久访问链接 (OSS URL)
+  optional string thumbnail_url = 2; // 如果是图片，返回自动生成的缩略图 URL (可选)
+  string filename = 3;               // 服务器保存的文件名
+  int64 size = 4;                    // 文件大小，单位：字节 (Bytes)
+}
+
+// ==================== 请求消息 ====================
+
+// 文件上传请求
+message UploadFileRequest {
+  bytes file = 1;                    // 文件二进制数据
+  optional string file_type = 2;     // 文件类型提示 (可选，服务端会自动检测)
+}
+
+// ==================== 响应消息 ====================
+
+// 文件上传响应
+message UploadFileResponse {
+  int32 code = 1;                    // 业务状态码，通常200表示成功
+  string message = 2;                // 状态信息，对code的简要描述
+  optional UploadResult data = 3;    // 业务数据主体
+}

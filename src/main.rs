@@ -34,6 +34,13 @@ async fn main() {
 
     tracing::info!("Database connection pool created");
 
+    // 开发模式：打印测试用的 JWT tokens
+    if std::env::var("DEV_MODE").unwrap_or_else(|_| "false".to_string()) == "true" {
+        if let Err(e) = common::dev_tools::print_test_tokens() {
+            tracing::warn!("Failed to generate test tokens: {}", e);
+        }
+    }
+
     // 配置 CORS
     let cors = CorsLayer::new()
         .allow_origin(Any)

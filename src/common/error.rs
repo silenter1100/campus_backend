@@ -2,7 +2,17 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use prost::Message;
 use std::fmt;
+
+/// 通用错误响应结构（符合 protobuf 响应格式）
+#[derive(prost::Message)]
+pub struct ErrorResponse {
+    #[prost(int32, tag = "1")]
+    pub code: i32,
+    #[prost(string, tag = "2")]
+    pub message: String,
+}
 
 /// 应用统一错误类型
 #[derive(Debug)]
@@ -55,26 +65,35 @@ impl From<prost::DecodeError> for AppError {
 /// 实现 IntoResponse，使 AppError 可以作为 Axum 的响应
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = match self {
+        let (status, code, message) = match self {
             AppError::DatabaseError(e) => {
                 tracing::error!("Database error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "数据库错误".to_string())
+                (StatusCode::INTERNAL_SERVER_ERROR, 500, "数据库错误".to_string())
             }
-            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
-            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, 404, msg),
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, 400, msg),
+            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, 401, msg),
             AppError::InternalError(msg) => {
                 tracing::error!("Internal error: {}", msg);
-                (StatusCode::INTERNAL_SERVER_ERROR, msg)
+                (StatusCode::INTERNAL_SERVER_ERROR, 500, msg)
             }
             AppError::ProtobufError(e) => {
                 tracing::error!("Protobuf error: {:?}", e);
-                (StatusCode::BAD_REQUEST, format!("Protobuf 解析错误: {}", e))
+                (StatusCode::BAD_REQUEST, 400, format!("Protobuf 解析错误: {}", e))
             }
         };
 
-        // 返回简单的文本响应
-        // 注意：实际应该返回 Protobuf 格式的错误响应
-        (status, message).into_response()
+        // 构造符合 protobuf 格式的错误响应
+        let error_response = ErrorResponse { code, message };
+        
+        // 序列化为 protobuf 二进制格式
+        let body = error_response.encode_to_vec();
+        let mut response = Response::new(body.into());
+        *response.status_mut() = status;
+        response.headers_mut().insert(
+            "content-type",
+            "application/x-protobuf".parse().unwrap(),
+        );
+        response
     }
 }
