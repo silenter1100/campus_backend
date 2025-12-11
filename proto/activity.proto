@@ -1,0 +1,295 @@
+syntax = "proto3";
+
+package campus.activity;
+
+// ====================
+//   枚举定义
+// ====================
+
+// 活动类型
+enum ActivityType {
+  ACTIVITY_TYPE_UNKNOWN = 0;
+  ACTIVITY_TYPE_LECTURE = 1;      // 讲座
+  ACTIVITY_TYPE_CLUB = 2;         // 社团
+  ACTIVITY_TYPE_COMPETITION = 3;  // 竞赛
+}
+
+// 活动状态
+enum ActivityStatus {
+  ACTIVITY_STATUS_UNKNOWN = 0;
+  ACTIVITY_STATUS_PUBLISHED = 1;  // 已发布/进行中
+  ACTIVITY_STATUS_FINISHED = 2;   // 已结束
+  ACTIVITY_STATUS_CANCELLED = 3;  // 已撤销
+}
+
+// 签到状态
+enum AttendanceStatus {
+  ATTENDANCE_STATUS_UNKNOWN = 0;
+  ATTENDANCE_STATUS_NOT_SIGNED = 1;  // 未签到
+  ATTENDANCE_STATUS_SIGNED = 2;      // 已签到
+}
+
+// 报名状态
+enum EnrollmentStatus {
+  ENROLLMENT_STATUS_UNKNOWN = 0;
+  ENROLLMENT_STATUS_ENROLLED = 1;    // 已报名
+  ENROLLMENT_STATUS_CANCELLED = 2;   // 已取消报名
+}
+
+// ====================
+//   基础数据模型
+// ====================
+
+// 活动完整信息
+message Activity {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string cover_url = 4;
+  ActivityType activity_type = 5;
+  string location = 6;
+  string organizer = 7;
+  int64 start_time = 8;        // Unix timestamp (seconds)
+  int64 end_time = 9;
+  int32 quota = 10;
+  int32 current_enrollments = 11;
+  bool need_sign_in = 12;
+  ActivityStatus status = 13;
+  int64 created_at = 14;
+  // 仅在详情接口返回
+  optional bool is_enrolled = 15;
+  optional bool is_collected = 16;
+}
+
+// 活动列表项（精简版）
+message ActivitySummary {
+  string id = 1;
+  string title = 2;
+  string cover_url = 3;
+  string location = 4;
+  int64 start_time = 5;
+  int32 quota = 6;
+  int32 current_enrollments = 7;
+}
+
+// 报名记录
+message EnrollmentRecord {
+  string user_id = 1;
+  string user_name = 2;
+  string student_id = 3;
+  string major = 4;
+  optional string phone_number = 5;
+  string activity_id = 6;
+  int64 enroll_time = 7;
+  AttendanceStatus attendance_status = 8;
+}
+
+// 我的报名活动项
+message EnrollmentSummary {
+  string activity_id = 1;
+  string title = 2;
+  string cover_url = 3;
+  int64 start_time = 4;
+  int64 end_time = 5;
+  EnrollmentStatus my_status = 6;
+}
+
+// 我的收藏活动项
+message CollectionSummary {
+  string activity_id = 1;
+  string title = 2;
+  string cover_url = 3;
+  int64 start_time = 4;
+  int64 end_time = 5;
+}
+
+// 分页信息
+message Pagination {
+  int64 total = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 pages = 4;
+}
+
+// ====================
+//   请求消息
+// ====================
+
+// 管理员发布活动
+message CreateActivityRequest {
+  string title = 1;
+  string content = 2;
+  string location = 3;
+  string organizer = 4;
+  int64 start_time = 5;
+  int64 end_time = 6;
+  optional string cover_url = 7;
+  optional ActivityType activity_type = 8;
+  optional int32 quota = 9;
+  optional bool need_sign_in = 10;
+}
+
+// 修改活动
+message UpdateActivityRequest {
+  string activity_id = 1;
+  optional string title = 2;
+  optional string content = 3;
+  optional string cover_url = 4;
+  optional ActivityType activity_type = 5;
+  optional string location = 6;
+  optional string organizer = 7;
+  optional int64 start_time = 8;
+  optional int64 end_time = 9;
+  optional int32 quota = 10;
+  optional bool need_sign_in = 11;
+  optional ActivityStatus status = 12;
+}
+
+// 获取活动列表
+message GetActivitiesRequest {
+  optional string keyword = 1;
+  optional ActivityType activity_type = 2;
+  optional int32 page = 3;
+  optional int32 page_size = 4;
+}
+
+// 获取活动详情
+message GetActivityDetailRequest {
+  string activity_id = 1;
+}
+
+// 学生报名
+message EnrollActivityRequest {
+  string activity_id = 1;
+  string user_name = 2;
+  string student_id = 3;
+  string major = 4;
+  optional string phone_number = 5;
+}
+
+// 取消报名
+message CancelEnrollmentRequest {
+  string activity_id = 1;
+}
+
+// 收藏活动
+message CollectActivityRequest {
+  string activity_id = 1;
+}
+
+// 取消收藏
+message UncollectActivityRequest {
+  string activity_id = 1;
+}
+
+// 获取报名列表
+message GetEnrollmentsRequest {
+  string activity_id = 1;
+}
+
+// 我的活动
+message GetMyActivitiesRequest {
+  optional bool include_enrollments = 1;
+  optional bool include_collections = 2;
+  optional int32 page = 3;
+  optional int32 page_size = 4;
+}
+
+// ====================
+//   响应消息
+// ====================
+
+// 管理员发布活动响应
+message CreateActivityResponse {
+  int32 code = 1;
+  string message = 2;
+  repeated Activity data = 3;
+}
+
+// 修改活动响应
+message UpdateActivityResponse {
+  int32 code = 1;
+  string message = 2;
+  optional string data = 3;  // null
+}
+
+// 获取活动列表响应
+message GetActivitiesResponse {
+  int32 code = 1;
+  string message = 2;
+  GetActivitiesData data = 3;
+}
+
+message GetActivitiesData {
+  repeated ActivitySummary list = 1;
+  Pagination pagination = 2;
+}
+
+// 获取活动详情响应
+message GetActivityDetailResponse {
+  int32 code = 1;
+  string message = 2;
+  Activity data = 3;
+}
+
+// 学生报名响应
+message EnrollActivityResponse {
+  int32 code = 1;
+  string message = 2;
+  optional string data = 3;  // null
+}
+
+// 取消报名响应
+message CancelEnrollmentResponse {
+  int32 code = 1;
+  string message = 2;
+  optional string data = 3;  // null
+}
+
+// 收藏活动响应
+message CollectActivityResponse {
+  int32 code = 1;
+  string message = 2;
+  optional string data = 3;  // null
+}
+
+// 取消收藏响应
+message UncollectActivityResponse {
+  int32 code = 1;
+  string message = 2;
+  optional string data = 3;  // null
+}
+
+// 获取报名列表响应
+message GetEnrollmentsResponse {
+  int32 code = 1;
+  string message = 2;
+  GetEnrollmentsData data = 3;
+}
+
+message GetEnrollmentsData {
+  int32 total_enrolled = 1;
+  repeated EnrollmentRecord enrollment_list = 2;
+}
+
+// 我的活动响应
+message GetMyActivitiesResponse {
+  int32 code = 1;
+  string message = 2;
+  GetMyActivitiesData data = 3;
+}
+
+message GetMyActivitiesData {
+  EnrolledData enrolled_data = 1;
+  CollectedData collected_data = 2;
+}
+
+message EnrolledData {
+  Pagination pagination = 1;
+  repeated EnrollmentSummary list = 2;
+}
+
+message CollectedData {
+  Pagination pagination = 1;
+  repeated CollectionSummary list = 2;
+}

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url VARCHAR(255) DEFAULT '' COMMENT '头像URL',
     role VARCHAR(20) DEFAULT 'student' COMMENT '角色：student/admin',
     wechat_id VARCHAR(50) DEFAULT '' COMMENT '微信号',
-    bio TEXT DEFAULT '' COMMENT '个人简介',
+    bio TEXT COMMENT '个人简介',
     collection_count INT DEFAULT 0 COMMENT '收藏数',
     forum_activity_score BIGINT DEFAULT 0 COMMENT '论坛活跃度',
     weekly_course_count BIGINT DEFAULT 0 COMMENT '本周课时数',

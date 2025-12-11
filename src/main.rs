@@ -77,7 +77,9 @@ async fn main() {
         // 课程模块
         .merge(modules::course::routes())
         // 用户模块
-        .merge(modules::user::routes());
+        .merge(modules::user::routes())
+        // 活动模块
+        .merge(modules::activity::routes());
 
     // 如果上传服务初始化成功，添加上传路由
     if upload_service.is_some() {
