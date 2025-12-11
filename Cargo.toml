@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "campus_backend",
+    "campus_mobile"
+]
+resolver = "2"
+
