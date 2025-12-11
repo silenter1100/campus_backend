@@ -96,7 +96,7 @@ pub async fn create_test_course(pool: &Pool<MySql>, semester_id: i64) -> i64 {
 /// 创建测试课表项
 pub async fn create_test_schedule_item(
     pool: &Pool<MySql>,
-    user_id: i64,
+    user_id: &str,
     semester_id: i64,
 ) -> i64 {
     let result = sqlx::query(

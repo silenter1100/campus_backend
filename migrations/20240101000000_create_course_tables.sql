@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public_courses (
     semester_id BIGINT NOT NULL COMMENT '学期ID',
     course_name VARCHAR(255) NOT NULL COMMENT '课程名称',
     teacher_name VARCHAR(100) NOT NULL COMMENT '教师姓名',
-    teacher_id BIGINT COMMENT '教师工号',
+    teacher_id VARCHAR(36) COMMENT '教师工号',
     location VARCHAR(100) NOT NULL COMMENT '上课地点',
     day_of_week INT NOT NULL COMMENT '星期几 1-7',
     start_section INT NOT NULL COMMENT '开始节次',
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public_courses (
 -- 创建用户课表项表
 CREATE TABLE IF NOT EXISTS schedule_items (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL COMMENT '用户ID',
+    user_id VARCHAR(36) NOT NULL COMMENT '用户ID（UUID）',
     semester_id BIGINT NOT NULL COMMENT '学期ID',
     source_id BIGINT COMMENT '关联的全校课程ID，自定义课程为NULL',
     course_name VARCHAR(255) NOT NULL COMMENT '课程名称',
