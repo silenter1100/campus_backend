@@ -49,13 +49,13 @@ message Activity {
   ActivityType activity_type = 5;
   string location = 6;
   string organizer = 7;
-  int64 start_time = 8;        // Unix timestamp (seconds)
-  int64 end_time = 9;
+  string start_time = 8;       // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
+  string end_time = 9;         // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   int32 quota = 10;
   int32 current_enrollments = 11;
   bool need_sign_in = 12;
   ActivityStatus status = 13;
-  int64 created_at = 14;
+  string created_at = 14;      // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   // 仅在详情接口返回
   optional bool is_enrolled = 15;
   optional bool is_collected = 16;
@@ -67,7 +67,7 @@ message ActivitySummary {
   string title = 2;
   string cover_url = 3;
   string location = 4;
-  int64 start_time = 5;
+  string start_time = 5;       // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   int32 quota = 6;
   int32 current_enrollments = 7;
 }
@@ -80,7 +80,7 @@ message EnrollmentRecord {
   string major = 4;
   optional string phone_number = 5;
   string activity_id = 6;
-  int64 enroll_time = 7;
+  string enroll_time = 7;      // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   AttendanceStatus attendance_status = 8;
 }
 
@@ -89,8 +89,8 @@ message EnrollmentSummary {
   string activity_id = 1;
   string title = 2;
   string cover_url = 3;
-  int64 start_time = 4;
-  int64 end_time = 5;
+  string start_time = 4;       // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
+  string end_time = 5;         // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   EnrollmentStatus my_status = 6;
 }
 
@@ -99,8 +99,8 @@ message CollectionSummary {
   string activity_id = 1;
   string title = 2;
   string cover_url = 3;
-  int64 start_time = 4;
-  int64 end_time = 5;
+  string start_time = 4;       // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
+  string end_time = 5;         // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
 }
 
 // 分页信息
@@ -121,8 +121,8 @@ message CreateActivityRequest {
   string content = 2;
   string location = 3;
   string organizer = 4;
-  int64 start_time = 5;
-  int64 end_time = 6;
+  string start_time = 5;       // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
+  string end_time = 6;         // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   optional string cover_url = 7;
   optional ActivityType activity_type = 8;
   optional int32 quota = 9;
@@ -138,8 +138,8 @@ message UpdateActivityRequest {
   optional ActivityType activity_type = 5;
   optional string location = 6;
   optional string organizer = 7;
-  optional int64 start_time = 8;
-  optional int64 end_time = 9;
+  optional string start_time = 8;  // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
+  optional string end_time = 9;    // ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)
   optional int32 quota = 10;
   optional bool need_sign_in = 11;
   optional ActivityStatus status = 12;

@@ -1,7 +1,7 @@
 // src/modules/activity/entity.rs
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::FromRow;
 
 // ====================

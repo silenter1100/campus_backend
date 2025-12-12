@@ -9,6 +9,21 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::common::state::{AppState, JwtConfig};
 
+// 健康检查处理函数
+async fn health_check() -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+    use serde_json::json;
+    
+    let response = json!({
+        "status": "healthy",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "service": "campus_backend",
+        "version": env!("CARGO_PKG_VERSION")
+    });
+    
+    (StatusCode::OK, axum::Json(response))
+}
+
 #[tokio::main]
 async fn main() {
     // 初始化日志
@@ -74,12 +89,14 @@ async fn main() {
 
     // 构建应用路由
     let mut app = Router::new()
+        // 健康检查端点
+        .route("/health", axum::routing::get(health_check))
         // 课程模块
         .merge(modules::course::routes())
         // 用户模块
         .merge(modules::user::routes())
         // 活动模块
-        .merge(modules::activity::routes());
+        .merge(modules::activity::create_routes());
 
     // 如果上传服务初始化成功，添加上传路由
     if upload_service.is_some() {
