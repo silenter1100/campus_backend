@@ -94,7 +94,7 @@ pub async fn update_activity(
     
     updates.push("updated_at = CURRENT_TIMESTAMP".to_string());
     
-    let sql = format!(
+    let _sql = format!(
         "UPDATE activities SET {} WHERE id = ${}",
         updates.join(", "),
         param_count

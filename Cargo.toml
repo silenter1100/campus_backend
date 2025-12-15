@@ -3,6 +3,10 @@ name = "campus_backend"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "campus_backend_server"
+path = "src/main.rs"
+
 [lib]
 name = "campus_backend"
 path = "src/lib.rs"
